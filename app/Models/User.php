@@ -113,6 +113,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->roles->flatMap->permissions->contains('name', $permissionName);
     }
 
+    public function getRememberTokenName(): string
+    {
+        return '';
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         if (! $this->is_active) {

@@ -4,9 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\DefaultAdminSeeder;
 use Database\Seeders\RbacSeeder;
+use Filament\Auth\Pages\Login;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class FilamentAdminPanelTest extends TestCase
@@ -92,5 +95,22 @@ class FilamentAdminPanelTest extends TestCase
         $inactiveAdmin->roles()->attach($adminRole->id);
 
         $this->actingAs($inactiveAdmin)->get('/admin')->assertStatus(403);
+    }
+
+    public function test_default_seeded_admin_can_sign_in_through_filament_login_form_with_remember_me(): void
+    {
+        $this->seed(DefaultAdminSeeder::class);
+
+        Livewire::test(Login::class)
+            ->fillForm([
+                'email' => 'admin@durianfarm.test',
+                'password' => 'Password123!',
+                'remember' => true,
+            ])
+            ->call('authenticate')
+            ->assertHasNoFormErrors()
+            ->assertRedirect('/admin');
+
+        $this->assertAuthenticated();
     }
 }

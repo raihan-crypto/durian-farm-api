@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Traits\Auditable;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +15,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     use Auditable, HasApiTokens, HasFactory, HasUuids, Notifiable;
 
@@ -104,6 +106,26 @@ class User extends Authenticatable
 
     public function hasPermission(string $permissionName): bool
     {
+        if ($this->hasRole('super_admin')) {
+            return true;
+        }
+
         return $this->roles->flatMap->permissions->contains('name', $permissionName);
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        if (! $this->is_active) {
+            return false;
+        }
+
+        $this->loadMissing('roles');
+
+        return $this->roles->pluck('name')->intersect([
+            'super_admin',
+            'admin',
+            'plantation_manager',
+            'owner',
+        ])->isNotEmpty();
     }
 }

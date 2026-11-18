@@ -1,0 +1,111 @@
+<?php
+
+namespace App\Filament\Resources\Trees;
+
+use App\Filament\Resources\Trees\Pages\ManageTrees;
+use App\Models\Tree;
+use BackedEnum;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
+use UnitEnum;
+
+class TreeResource extends Resource
+{
+    protected static ?string $model = Tree::class;
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedGlobeAlt;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Pohon & Varietas';
+
+    protected static ?string $navigationLabel = 'Pohon Durian';
+
+    protected static ?string $modelLabel = 'Pohon Durian';
+
+    protected static ?int $navigationSort = 2;
+
+    public static function canViewAny(): bool
+    {
+        return (bool) auth()->user()?->hasPermission('trees.view');
+    }
+
+    public static function canCreate(): bool
+    {
+        return (bool) auth()->user()?->hasPermission('trees.manage');
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return (bool) auth()->user()?->hasPermission('trees.manage');
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return (bool) auth()->user()?->hasPermission('trees.manage');
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return $schema->components([
+            Select::make('garden_id')->label('Kebun')->relationship('garden', 'name')->searchable()->preload()->required(),
+            Select::make('variety_id')->label('Varietas')->relationship('variety', 'name')->searchable()->preload(),
+            TextInput::make('tree_code')->label('Kode Pohon')->required()->maxLength(100),
+            TextInput::make('tree_name')->label('Nama / Label Pohon')->maxLength(150),
+            DatePicker::make('planted_at')->label('Tanggal Tanam'),
+            Select::make('status')->label('Status')->options(Tree::STATUS_LABELS)->default('active')->required(),
+            TextInput::make('latitude')->label('Latitude')->numeric(),
+            TextInput::make('longitude')->label('Longitude')->numeric(),
+            Textarea::make('notes')->label('Catatan')->columnSpanFull(),
+        ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                TextColumn::make('tree_code')->label('Kode')->searchable()->sortable()->badge(),
+                TextColumn::make('tree_name')->label('Nama')->searchable()->placeholder('-'),
+                TextColumn::make('variety.name')->label('Varietas')->sortable()->placeholder('-'),
+                TextColumn::make('garden.name')->label('Kebun')->sortable(),
+                TextColumn::make('garden.block.name')->label('Blok'),
+                TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state) => Tree::STATUS_LABELS[$state] ?? $state)
+                    ->color(fn (string $state) => match ($state) {
+                        'active' => 'success',
+                        'monitoring' => 'info',
+                        'sick', 'unproductive' => 'warning',
+                        'dead', 'removed' => 'danger',
+                        default => 'gray',
+                    }),
+                TextColumn::make('planted_at')->label('Tgl Tanam')->date('d M Y')->placeholder('-'),
+            ])
+            ->filters([
+                SelectFilter::make('garden_id')->label('Kebun')->relationship('garden', 'name'),
+                SelectFilter::make('variety_id')->label('Varietas')->relationship('variety', 'name'),
+                SelectFilter::make('status')->label('Status')->options(Tree::STATUS_LABELS),
+            ])
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
+            ]);
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => ManageTrees::route('/'),
+        ];
+    }
+}

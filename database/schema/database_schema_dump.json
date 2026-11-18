@@ -1,0 +1,2827 @@
+{
+    "activity_photos": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "activity_type",
+                "Type": "varchar(50)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "activity_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "file_path",
+                "Type": "varchar(500)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "file_name",
+                "Type": "varchar(255)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "caption",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "uploaded_by",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "uploaded_by",
+                "REFERENCED_TABLE_NAME": "users",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "agricultural_products": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "category_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(150)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "brand",
+                "Type": "varchar(120)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "active_ingredient",
+                "Type": "varchar(150)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "unit",
+                "Type": "varchar(50)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "description",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "category_id",
+                "REFERENCED_TABLE_NAME": "product_categories",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "audit_logs": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "bigint(20) unsigned",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": "auto_increment"
+            },
+            {
+                "Field": "user_id",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "action",
+                "Type": "varchar(50)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "table_name",
+                "Type": "varchar(100)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "record_id",
+                "Type": "varchar(100)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "old_values",
+                "Type": "longtext",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "new_values",
+                "Type": "longtext",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "ip_address",
+                "Type": "varchar(45)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "user_agent",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "user_id",
+                "REFERENCED_TABLE_NAME": "users",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "block_farmers": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "block_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "farmer_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "assignment_date",
+                "Type": "date",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "end_date",
+                "Type": "date",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "block_id",
+                "REFERENCED_TABLE_NAME": "blocks",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "farmer_id",
+                "REFERENCED_TABLE_NAME": "farmers",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "blocks": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "village_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(100)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "area_hectares",
+                "Type": "decimal(12,4)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "description",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "village_id",
+                "REFERENCED_TABLE_NAME": "villages",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "durian_varieties": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(150)",
+                "Null": "NO",
+                "Key": "UNI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "origin",
+                "Type": "varchar(150)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "description",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": []
+    },
+    "farmers": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "user_id",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(150)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "phone",
+                "Type": "varchar(30)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "address",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "user_id",
+                "REFERENCED_TABLE_NAME": "users",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "fertilization_items": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "fertilization_record_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "product_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "quantity",
+                "Type": "decimal(12,3)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "unit",
+                "Type": "varchar(50)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "fertilization_record_id",
+                "REFERENCED_TABLE_NAME": "fertilization_records",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "product_id",
+                "REFERENCED_TABLE_NAME": "agricultural_products",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "fertilization_records": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "tree_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "activity_date",
+                "Type": "datetime",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "method",
+                "Type": "enum('tabur','kocor','semprot_daun','lainnya')",
+                "Null": "NO",
+                "Key": "",
+                "Default": "tabur",
+                "Extra": ""
+            },
+            {
+                "Field": "dosage_notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "recorded_by",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "tree_id",
+                "REFERENCED_TABLE_NAME": "trees",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "recorded_by",
+                "REFERENCED_TABLE_NAME": "users",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "flowering_records": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "tree_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "flowering_date",
+                "Type": "date",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "flowering_status",
+                "Type": "enum('mulai','berbunga','selesai')",
+                "Null": "NO",
+                "Key": "",
+                "Default": "mulai",
+                "Extra": ""
+            },
+            {
+                "Field": "flower_count",
+                "Type": "int(10) unsigned",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "recorded_by",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "tree_id",
+                "REFERENCED_TABLE_NAME": "trees",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "recorded_by",
+                "REFERENCED_TABLE_NAME": "users",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "fruit_development_records": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "tree_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "observation_date",
+                "Type": "date",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "fruit_count",
+                "Type": "int(10) unsigned",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "development_stage",
+                "Type": "enum('pentil','pembesaran','pematangan','siap_panen','lainnya')",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "recorded_by",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "tree_id",
+                "REFERENCED_TABLE_NAME": "trees",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "recorded_by",
+                "REFERENCED_TABLE_NAME": "users",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "garden_farmers": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "garden_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "farmer_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "assignment_date",
+                "Type": "date",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "end_date",
+                "Type": "date",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "garden_id",
+                "REFERENCED_TABLE_NAME": "gardens",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "farmer_id",
+                "REFERENCED_TABLE_NAME": "farmers",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "garden_owners": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "garden_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "owner_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "ownership_percentage",
+                "Type": "decimal(5,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "start_date",
+                "Type": "date",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "end_date",
+                "Type": "date",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "garden_id",
+                "REFERENCED_TABLE_NAME": "gardens",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "owner_id",
+                "REFERENCED_TABLE_NAME": "owners",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "gardens": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "block_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(150)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "area_hectares",
+                "Type": "decimal(12,4)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "address",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "latitude",
+                "Type": "decimal(10,7)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "longitude",
+                "Type": "decimal(10,7)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "description",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "block_id",
+                "REFERENCED_TABLE_NAME": "blocks",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "harvest_details": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "harvest_record_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "fruit_grade",
+                "Type": "varchar(50)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "fruit_count",
+                "Type": "int(10) unsigned",
+                "Null": "NO",
+                "Key": "",
+                "Default": "0",
+                "Extra": ""
+            },
+            {
+                "Field": "weight_kg",
+                "Type": "decimal(12,3)",
+                "Null": "NO",
+                "Key": "",
+                "Default": "0.000",
+                "Extra": ""
+            },
+            {
+                "Field": "notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "harvest_record_id",
+                "REFERENCED_TABLE_NAME": "harvest_records",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "harvest_records": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "session_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "garden_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "tree_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "fruit_count",
+                "Type": "int(10) unsigned",
+                "Null": "NO",
+                "Key": "",
+                "Default": "0",
+                "Extra": ""
+            },
+            {
+                "Field": "total_weight_kg",
+                "Type": "decimal(12,3)",
+                "Null": "NO",
+                "Key": "",
+                "Default": "0.000",
+                "Extra": ""
+            },
+            {
+                "Field": "notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "session_id",
+                "REFERENCED_TABLE_NAME": "harvest_sessions",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "garden_id",
+                "REFERENCED_TABLE_NAME": "harvest_sessions",
+                "REFERENCED_COLUMN_NAME": "garden_id"
+            },
+            {
+                "COLUMN_NAME": "tree_id",
+                "REFERENCED_TABLE_NAME": "trees",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "garden_id",
+                "REFERENCED_TABLE_NAME": "trees",
+                "REFERENCED_COLUMN_NAME": "garden_id"
+            }
+        ]
+    },
+    "harvest_seasons": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "garden_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(150)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "start_date",
+                "Type": "date",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "end_date",
+                "Type": "date",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "status",
+                "Type": "enum('planned','active','completed')",
+                "Null": "NO",
+                "Key": "",
+                "Default": "active",
+                "Extra": ""
+            },
+            {
+                "Field": "notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "garden_id",
+                "REFERENCED_TABLE_NAME": "gardens",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "harvest_sessions": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "season_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "garden_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "harvest_date",
+                "Type": "datetime",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "session_name",
+                "Type": "varchar(150)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "weather_condition",
+                "Type": "varchar(100)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "recorded_by",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "season_id",
+                "REFERENCED_TABLE_NAME": "harvest_seasons",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "garden_id",
+                "REFERENCED_TABLE_NAME": "harvest_seasons",
+                "REFERENCED_COLUMN_NAME": "garden_id"
+            },
+            {
+                "COLUMN_NAME": "garden_id",
+                "REFERENCED_TABLE_NAME": "gardens",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "recorded_by",
+                "REFERENCED_TABLE_NAME": "users",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "iot_devices": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "monitoring_area_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "device_code",
+                "Type": "varchar(100)",
+                "Null": "NO",
+                "Key": "UNI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "device_name",
+                "Type": "varchar(150)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "device_type",
+                "Type": "varchar(100)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "manufacturer",
+                "Type": "varchar(100)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "installation_date",
+                "Type": "date",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "last_seen_at",
+                "Type": "datetime",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "status",
+                "Type": "enum('active','inactive','maintenance','offline')",
+                "Null": "NO",
+                "Key": "",
+                "Default": "active",
+                "Extra": ""
+            },
+            {
+                "Field": "description",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "monitoring_area_id",
+                "REFERENCED_TABLE_NAME": "monitoring_areas",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "iot_telemetry": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "bigint(20) unsigned",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": "auto_increment"
+            },
+            {
+                "Field": "device_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "recorded_at",
+                "Type": "datetime",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "temperature_c",
+                "Type": "decimal(6,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "humidity_percent",
+                "Type": "decimal(6,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "soil_moisture_percent",
+                "Type": "decimal(6,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "rainfall_mm",
+                "Type": "decimal(10,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "battery_percent",
+                "Type": "decimal(6,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "additional_data",
+                "Type": "longtext",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "device_id",
+                "REFERENCED_TABLE_NAME": "iot_devices",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "monitoring_areas": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "garden_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(150)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "description",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "latitude",
+                "Type": "decimal(10,7)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "longitude",
+                "Type": "decimal(10,7)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "area_hectares",
+                "Type": "decimal(12,4)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "garden_id",
+                "REFERENCED_TABLE_NAME": "gardens",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "organizations": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(150)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "description",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": []
+    },
+    "owners": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "owner_type",
+                "Type": "enum('individual','organization')",
+                "Null": "NO",
+                "Key": "",
+                "Default": "individual",
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(150)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "phone",
+                "Type": "varchar(30)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "address",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": []
+    },
+    "permissions": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(150)",
+                "Null": "NO",
+                "Key": "UNI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "description",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": []
+    },
+    "product_categories": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(120)",
+                "Null": "NO",
+                "Key": "UNI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "description",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": []
+    },
+    "role_permissions": {
+        "columns": [
+            {
+                "Field": "role_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "permission_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "role_id",
+                "REFERENCED_TABLE_NAME": "roles",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "permission_id",
+                "REFERENCED_TABLE_NAME": "permissions",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "roles": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(100)",
+                "Null": "NO",
+                "Key": "UNI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "description",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": []
+    },
+    "spraying_items": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "spraying_record_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "product_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "quantity",
+                "Type": "decimal(12,3)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "unit",
+                "Type": "varchar(50)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "spraying_record_id",
+                "REFERENCED_TABLE_NAME": "spraying_records",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "product_id",
+                "REFERENCED_TABLE_NAME": "agricultural_products",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "spraying_records": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "tree_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "activity_date",
+                "Type": "datetime",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "spraying_method",
+                "Type": "varchar(100)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "dosage_notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "recorded_by",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "tree_id",
+                "REFERENCED_TABLE_NAME": "trees",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "recorded_by",
+                "REFERENCED_TABLE_NAME": "users",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "sync_logs": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "bigint(20) unsigned",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": "auto_increment"
+            },
+            {
+                "Field": "user_id",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "device_identifier",
+                "Type": "varchar(150)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "client_transaction_id",
+                "Type": "varchar(100)",
+                "Null": "NO",
+                "Key": "UNI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "entity_type",
+                "Type": "varchar(100)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "entity_id",
+                "Type": "varchar(100)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "sync_status",
+                "Type": "enum('pending','success','failed','conflict')",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": "pending",
+                "Extra": ""
+            },
+            {
+                "Field": "error_message",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "synced_at",
+                "Type": "datetime",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "user_id",
+                "REFERENCED_TABLE_NAME": "users",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "tree_measurements": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "tree_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "measured_at",
+                "Type": "datetime",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "diameter_cm",
+                "Type": "decimal(8,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "height_m",
+                "Type": "decimal(8,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "canopy_width_m",
+                "Type": "decimal(8,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "recorded_by",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "tree_id",
+                "REFERENCED_TABLE_NAME": "trees",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "recorded_by",
+                "REFERENCED_TABLE_NAME": "users",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "tree_qr_codes": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "tree_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "UNI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "qr_code",
+                "Type": "varchar(255)",
+                "Null": "NO",
+                "Key": "UNI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "public_token",
+                "Type": "varchar(100)",
+                "Null": "NO",
+                "Key": "UNI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "generated_at",
+                "Type": "datetime",
+                "Null": "NO",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "is_active",
+                "Type": "tinyint(1)",
+                "Null": "NO",
+                "Key": "",
+                "Default": "1",
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "tree_id",
+                "REFERENCED_TABLE_NAME": "trees",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "trees": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "garden_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "variety_id",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "tree_code",
+                "Type": "varchar(100)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "tree_name",
+                "Type": "varchar(150)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "planted_at",
+                "Type": "date",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "planting_age_months",
+                "Type": "int(10) unsigned",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "initial_diameter_cm",
+                "Type": "decimal(8,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "initial_height_m",
+                "Type": "decimal(8,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "initial_canopy_width_m",
+                "Type": "decimal(8,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "latitude",
+                "Type": "decimal(10,7)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "longitude",
+                "Type": "decimal(10,7)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "status",
+                "Type": "enum('active','inactive','dead','removed')",
+                "Null": "NO",
+                "Key": "MUL",
+                "Default": "active",
+                "Extra": ""
+            },
+            {
+                "Field": "notes",
+                "Type": "text",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "garden_id",
+                "REFERENCED_TABLE_NAME": "gardens",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "variety_id",
+                "REFERENCED_TABLE_NAME": "durian_varieties",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "user_roles": {
+        "columns": [
+            {
+                "Field": "user_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "role_id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "user_id",
+                "REFERENCED_TABLE_NAME": "users",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "role_id",
+                "REFERENCED_TABLE_NAME": "roles",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "users": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "organization_id",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(150)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "email",
+                "Type": "varchar(150)",
+                "Null": "NO",
+                "Key": "UNI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "password",
+                "Type": "varchar(255)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "phone",
+                "Type": "varchar(30)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "is_active",
+                "Type": "tinyint(1)",
+                "Null": "NO",
+                "Key": "",
+                "Default": "1",
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "organization_id",
+                "REFERENCED_TABLE_NAME": "organizations",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    },
+    "villages": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "name",
+                "Type": "varchar(150)",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "district",
+                "Type": "varchar(150)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "regency",
+                "Type": "varchar(150)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "province",
+                "Type": "varchar(150)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            },
+            {
+                "Field": "updated_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": "on update current_timestamp()"
+            }
+        ],
+        "foreign_keys": []
+    },
+    "weather_records": {
+        "columns": [
+            {
+                "Field": "id",
+                "Type": "char(36)",
+                "Null": "NO",
+                "Key": "PRI",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "monitoring_area_id",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "garden_id",
+                "Type": "char(36)",
+                "Null": "YES",
+                "Key": "MUL",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "recorded_at",
+                "Type": "datetime",
+                "Null": "NO",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "temperature_c",
+                "Type": "decimal(6,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "humidity_percent",
+                "Type": "decimal(6,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "rainfall_mm",
+                "Type": "decimal(10,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "wind_speed",
+                "Type": "decimal(8,2)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "weather_condition",
+                "Type": "varchar(100)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "source",
+                "Type": "varchar(100)",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "raw_data",
+                "Type": "longtext",
+                "Null": "YES",
+                "Key": "",
+                "Default": null,
+                "Extra": ""
+            },
+            {
+                "Field": "created_at",
+                "Type": "timestamp",
+                "Null": "YES",
+                "Key": "",
+                "Default": "current_timestamp()",
+                "Extra": ""
+            }
+        ],
+        "foreign_keys": [
+            {
+                "COLUMN_NAME": "garden_id",
+                "REFERENCED_TABLE_NAME": "gardens",
+                "REFERENCED_COLUMN_NAME": "id"
+            },
+            {
+                "COLUMN_NAME": "monitoring_area_id",
+                "REFERENCED_TABLE_NAME": "monitoring_areas",
+                "REFERENCED_COLUMN_NAME": "id"
+            }
+        ]
+    }
+}

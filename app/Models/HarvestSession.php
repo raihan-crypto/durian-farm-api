@@ -56,4 +56,9 @@ class HarvestSession extends Model
     {
         return $this->hasMany(HarvestRecord::class, 'session_id');
     }
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(ActivityPhoto::class, 'activity_id')->where('activity_type', 'harvest_session');
+    }
 }

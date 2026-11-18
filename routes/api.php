@@ -10,6 +10,10 @@ use App\Http\Controllers\Api\V1\FertilizationRecordController;
 use App\Http\Controllers\Api\V1\FloweringRecordController;
 use App\Http\Controllers\Api\V1\FruitDevelopmentRecordController;
 use App\Http\Controllers\Api\V1\GardenController;
+use App\Http\Controllers\Api\V1\HarvestRecordController;
+use App\Http\Controllers\Api\V1\HarvestReportController;
+use App\Http\Controllers\Api\V1\HarvestSeasonController;
+use App\Http\Controllers\Api\V1\HarvestSessionController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OwnerController;
 use App\Http\Controllers\Api\V1\ProductCategoryController;
@@ -183,5 +187,30 @@ Route::prefix('v1')->group(function () {
         Route::post('/activity-photos', [ActivityPhotoController::class, 'store'])->middleware('permission:activities.record,trees.manage,trees.measure');
         Route::get('/activity-photos/{id}', [ActivityPhotoController::class, 'show'])->middleware('permission:activities.view');
         Route::delete('/activity-photos/{id}', [ActivityPhotoController::class, 'destroy'])->middleware('permission:activities.record,trees.manage');
+
+        // Harvest seasons
+        Route::get('/harvest-seasons', [HarvestSeasonController::class, 'index'])->middleware('permission:harvest.view');
+        Route::post('/harvest-seasons', [HarvestSeasonController::class, 'store'])->middleware('permission:harvest.manage');
+        Route::get('/harvest-seasons/{id}', [HarvestSeasonController::class, 'show'])->middleware('permission:harvest.view');
+        Route::put('/harvest-seasons/{id}', [HarvestSeasonController::class, 'update'])->middleware('permission:harvest.manage');
+        Route::delete('/harvest-seasons/{id}', [HarvestSeasonController::class, 'destroy'])->middleware('permission:harvest.manage');
+
+        // Harvest sessions
+        Route::get('/harvest-sessions', [HarvestSessionController::class, 'index'])->middleware('permission:harvest.view');
+        Route::post('/harvest-sessions', [HarvestSessionController::class, 'store'])->middleware('permission:harvest.manage,harvest.record');
+        Route::get('/harvest-sessions/{id}', [HarvestSessionController::class, 'show'])->middleware('permission:harvest.view');
+        Route::put('/harvest-sessions/{id}', [HarvestSessionController::class, 'update'])->middleware('permission:harvest.manage');
+        Route::delete('/harvest-sessions/{id}', [HarvestSessionController::class, 'destroy'])->middleware('permission:harvest.manage');
+
+        // Per-tree harvest records & grade details
+        Route::get('/harvest-records', [HarvestRecordController::class, 'index'])->middleware('permission:harvest.view');
+        Route::post('/harvest-records', [HarvestRecordController::class, 'store'])->middleware('permission:harvest.record');
+        Route::get('/harvest-records/{id}', [HarvestRecordController::class, 'show'])->middleware('permission:harvest.view');
+        Route::put('/harvest-records/{id}', [HarvestRecordController::class, 'update'])->middleware('permission:harvest.manage,harvest.record');
+
+        // Harvest productivity reports & export
+        Route::get('/reports/harvest/summary', [HarvestReportController::class, 'summary'])->middleware('permission:reports.view,harvest.view');
+        Route::get('/reports/harvest/comparison', [HarvestReportController::class, 'comparison'])->middleware('permission:reports.view,harvest.view');
+        Route::get('/reports/harvest/export', [HarvestReportController::class, 'export'])->middleware('permission:reports.export');
     });
 });

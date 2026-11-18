@@ -55,4 +55,33 @@ return [
         'mimes' => ['jpeg', 'jpg', 'png', 'webp'],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Plantation Activity Reference Options (SRS Bab 5)
+    |--------------------------------------------------------------------------
+    */
+
+    'activities' => [
+        'fertilization_methods' => [
+            'tabur' => 'Tabur',
+            'kocor' => 'Kocor',
+            'semprot_daun' => 'Semprot Daun',
+            'lainnya' => 'Lainnya',
+        ],
+
+        'flowering_statuses' => [
+            'mulai' => 'Mulai Berbunga',
+            'berbunga' => 'Berbunga Penuh',
+            'selesai' => 'Selesai Berbunga',
+        ],
+
+        'fruit_development_stages' => [
+            'pentil' => 'Pembentukan Bakal Buah / Pentil',
+            'pembesaran' => 'Pembesaran Buah',
+            'pematangan' => 'Pematangan',
+            'siap_panen' => 'Siap Panen',
+            'lainnya' => 'Lainnya',
+        ],
+    ],
+
 ];

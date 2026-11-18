@@ -1,14 +1,21 @@
 <?php
 
+use App\Http\Controllers\Api\V1\ActivityPhotoController;
+use App\Http\Controllers\Api\V1\AgriculturalProductController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BlockController;
 use App\Http\Controllers\Api\V1\DurianVarietyController;
 use App\Http\Controllers\Api\V1\FarmerController;
+use App\Http\Controllers\Api\V1\FertilizationRecordController;
+use App\Http\Controllers\Api\V1\FloweringRecordController;
+use App\Http\Controllers\Api\V1\FruitDevelopmentRecordController;
 use App\Http\Controllers\Api\V1\GardenController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OwnerController;
+use App\Http\Controllers\Api\V1\ProductCategoryController;
 use App\Http\Controllers\Api\V1\PublicTreeController;
 use App\Http\Controllers\Api\V1\RbacController;
+use App\Http\Controllers\Api\V1\SprayingRecordController;
 use App\Http\Controllers\Api\V1\TreeController;
 use App\Http\Controllers\Api\V1\TreeMeasurementController;
 use App\Http\Controllers\Api\V1\TreePhotoController;
@@ -133,5 +140,48 @@ Route::prefix('v1')->group(function () {
         Route::put('/trees/{id}/qr-code', [TreeQrCodeController::class, 'update'])->middleware('permission:trees.manage');
         Route::post('/trees/{id}/qr-code/regenerate', [TreeQrCodeController::class, 'regenerate'])->middleware('permission:trees.manage');
         Route::get('/trees/{id}/qr-code/image', [TreeQrCodeController::class, 'image'])->middleware('permission:trees.view');
+
+        // Product categories master data
+        Route::get('/product-categories', [ProductCategoryController::class, 'index'])->middleware('permission:products.view');
+        Route::post('/product-categories', [ProductCategoryController::class, 'store'])->middleware('permission:products.manage');
+        Route::get('/product-categories/{id}', [ProductCategoryController::class, 'show'])->middleware('permission:products.view');
+        Route::put('/product-categories/{id}', [ProductCategoryController::class, 'update'])->middleware('permission:products.manage');
+        Route::delete('/product-categories/{id}', [ProductCategoryController::class, 'destroy'])->middleware('permission:products.manage');
+
+        // Agricultural products master data
+        Route::get('/agricultural-products', [AgriculturalProductController::class, 'index'])->middleware('permission:products.view');
+        Route::post('/agricultural-products', [AgriculturalProductController::class, 'store'])->middleware('permission:products.manage');
+        Route::get('/agricultural-products/{id}', [AgriculturalProductController::class, 'show'])->middleware('permission:products.view');
+        Route::put('/agricultural-products/{id}', [AgriculturalProductController::class, 'update'])->middleware('permission:products.manage');
+        Route::delete('/agricultural-products/{id}', [AgriculturalProductController::class, 'destroy'])->middleware('permission:products.manage');
+
+        // Plantation activities: Fertilization
+        Route::get('/fertilization-records/methods', [FertilizationRecordController::class, 'methods'])->middleware('permission:activities.view');
+        Route::get('/fertilization-records', [FertilizationRecordController::class, 'index'])->middleware('permission:activities.view');
+        Route::post('/fertilization-records', [FertilizationRecordController::class, 'store'])->middleware('permission:activities.record');
+        Route::get('/fertilization-records/{id}', [FertilizationRecordController::class, 'show'])->middleware('permission:activities.view');
+
+        // Plantation activities: Spraying
+        Route::get('/spraying-records', [SprayingRecordController::class, 'index'])->middleware('permission:activities.view');
+        Route::post('/spraying-records', [SprayingRecordController::class, 'store'])->middleware('permission:activities.record');
+        Route::get('/spraying-records/{id}', [SprayingRecordController::class, 'show'])->middleware('permission:activities.view');
+
+        // Plantation activities: Flowering
+        Route::get('/flowering-records/statuses', [FloweringRecordController::class, 'statuses'])->middleware('permission:activities.view');
+        Route::get('/flowering-records', [FloweringRecordController::class, 'index'])->middleware('permission:activities.view');
+        Route::post('/flowering-records', [FloweringRecordController::class, 'store'])->middleware('permission:activities.record');
+        Route::get('/flowering-records/{id}', [FloweringRecordController::class, 'show'])->middleware('permission:activities.view');
+
+        // Plantation activities: Fruit development
+        Route::get('/fruit-development-records/stages', [FruitDevelopmentRecordController::class, 'stages'])->middleware('permission:activities.view');
+        Route::get('/fruit-development-records', [FruitDevelopmentRecordController::class, 'index'])->middleware('permission:activities.view');
+        Route::post('/fruit-development-records', [FruitDevelopmentRecordController::class, 'store'])->middleware('permission:activities.record');
+        Route::get('/fruit-development-records/{id}', [FruitDevelopmentRecordController::class, 'show'])->middleware('permission:activities.view');
+
+        // Centralized polymorphic activity photos
+        Route::get('/activity-photos', [ActivityPhotoController::class, 'index'])->middleware('permission:activities.view');
+        Route::post('/activity-photos', [ActivityPhotoController::class, 'store'])->middleware('permission:activities.record,trees.manage,trees.measure');
+        Route::get('/activity-photos/{id}', [ActivityPhotoController::class, 'show'])->middleware('permission:activities.view');
+        Route::delete('/activity-photos/{id}', [ActivityPhotoController::class, 'destroy'])->middleware('permission:activities.record,trees.manage');
     });
 });

@@ -27,6 +27,7 @@ class TreeQrCode extends Model
         'public_token',
         'generated_at',
         'is_active',
+        'public_fields',
     ];
 
     protected function casts(): array
@@ -34,6 +35,7 @@ class TreeQrCode extends Model
         return [
             'generated_at' => 'datetime',
             'is_active' => 'boolean',
+            'public_fields' => 'array',
         ];
     }
 

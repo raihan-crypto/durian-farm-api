@@ -2,11 +2,17 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BlockController;
+use App\Http\Controllers\Api\V1\DurianVarietyController;
 use App\Http\Controllers\Api\V1\FarmerController;
 use App\Http\Controllers\Api\V1\GardenController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OwnerController;
+use App\Http\Controllers\Api\V1\PublicTreeController;
 use App\Http\Controllers\Api\V1\RbacController;
+use App\Http\Controllers\Api\V1\TreeController;
+use App\Http\Controllers\Api\V1\TreeMeasurementController;
+use App\Http\Controllers\Api\V1\TreePhotoController;
+use App\Http\Controllers\Api\V1\TreeQrCodeController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VillageController;
 use Illuminate\Support\Facades\Route;
@@ -14,6 +20,10 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     // Public authentication endpoint
     Route::post('/auth/login', [AuthController::class, 'login']);
+
+    // Public tree information via QR Code token (rate-limited, SRS 10 & 16.3)
+    Route::get('/public/trees/{token}', [PublicTreeController::class, 'show'])
+        ->middleware('throttle:public-tree');
 
     // Protected API endpoints
     Route::middleware('auth:sanctum')->group(function () {
@@ -88,5 +98,40 @@ Route::prefix('v1')->group(function () {
         Route::get('/farmers/{id}', [FarmerController::class, 'show'])->middleware('permission:ownership.view');
         Route::put('/farmers/{id}', [FarmerController::class, 'update'])->middleware('permission:ownership.manage');
         Route::delete('/farmers/{id}', [FarmerController::class, 'destroy'])->middleware('permission:ownership.manage');
+
+        // Durian varieties master data
+        Route::get('/durian-varieties', [DurianVarietyController::class, 'index'])->middleware('permission:trees.view');
+        Route::post('/durian-varieties', [DurianVarietyController::class, 'store'])->middleware('permission:trees.manage');
+        Route::get('/durian-varieties/{id}', [DurianVarietyController::class, 'show'])->middleware('permission:trees.view');
+        Route::put('/durian-varieties/{id}', [DurianVarietyController::class, 'update'])->middleware('permission:trees.manage');
+        Route::delete('/durian-varieties/{id}', [DurianVarietyController::class, 'destroy'])->middleware('permission:trees.manage');
+        Route::post('/durian-varieties/{id}/photo', [DurianVarietyController::class, 'uploadPhoto'])->middleware('permission:trees.manage');
+        Route::delete('/durian-varieties/{id}/photo', [DurianVarietyController::class, 'deletePhoto'])->middleware('permission:trees.manage');
+
+        // Durian trees, history, photos & QR Code management
+        Route::get('/trees/statuses', [TreeController::class, 'statuses'])->middleware('permission:trees.view');
+        Route::get('/trees/qr-public-fields', [TreeQrCodeController::class, 'publicFieldsMeta'])->middleware('permission:trees.view');
+        Route::get('/trees', [TreeController::class, 'index'])->middleware('permission:trees.view');
+        Route::post('/trees', [TreeController::class, 'store'])->middleware('permission:trees.manage');
+        Route::get('/trees/{id}', [TreeController::class, 'show'])->middleware('permission:trees.view');
+        Route::put('/trees/{id}', [TreeController::class, 'update'])->middleware('permission:trees.manage');
+        Route::delete('/trees/{id}', [TreeController::class, 'destroy'])->middleware('permission:trees.manage');
+        Route::get('/trees/{id}/history', [TreeController::class, 'history'])->middleware('permission:trees.view');
+
+        // Tree measurements (historical)
+        Route::get('/trees/{id}/measurements', [TreeMeasurementController::class, 'indexByTree'])->middleware('permission:trees.view');
+        Route::post('/tree-measurements', [TreeMeasurementController::class, 'store'])->middleware('permission:trees.measure');
+        Route::get('/tree-measurements/{id}', [TreeMeasurementController::class, 'show'])->middleware('permission:trees.view');
+
+        // Tree photos
+        Route::get('/trees/{id}/photos', [TreePhotoController::class, 'index'])->middleware('permission:trees.view');
+        Route::post('/trees/{id}/photos', [TreePhotoController::class, 'store'])->middleware('permission:trees.manage,trees.measure');
+        Route::delete('/trees/{id}/photos/{photoId}', [TreePhotoController::class, 'destroy'])->middleware('permission:trees.manage');
+
+        // Tree QR Code
+        Route::get('/trees/{id}/qr-code', [TreeQrCodeController::class, 'show'])->middleware('permission:trees.view');
+        Route::put('/trees/{id}/qr-code', [TreeQrCodeController::class, 'update'])->middleware('permission:trees.manage');
+        Route::post('/trees/{id}/qr-code/regenerate', [TreeQrCodeController::class, 'regenerate'])->middleware('permission:trees.manage');
+        Route::get('/trees/{id}/qr-code/image', [TreeQrCodeController::class, 'image'])->middleware('permission:trees.view');
     });
 });

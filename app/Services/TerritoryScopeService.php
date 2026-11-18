@@ -25,8 +25,12 @@ class TerritoryScopeService
 
     /**
      * Determine whether the user's territory visibility must be scoped to their farmer assignments.
+     *
+     * Users without an unrestricted role are always scoped (deny-by-default). Users that have
+     * no farmer profile (e.g. owner-only accounts, which cannot yet be linked to an owner record)
+     * therefore see no territory data until a proper link exists.
      */
-    public function isFarmerScoped(User $user): bool
+    public function isScoped(User $user): bool
     {
         $user->loadMissing('roles');
 
@@ -38,7 +42,7 @@ class TerritoryScopeService
             }
         }
 
-        return in_array('farmer', $roleNames, true);
+        return true;
     }
 
     /**
@@ -91,7 +95,7 @@ class TerritoryScopeService
      */
     public function getAccessibleGardenIds(User $user): ?array
     {
-        if (! $this->isFarmerScoped($user)) {
+        if (! $this->isScoped($user)) {
             return null;
         }
 
@@ -120,7 +124,7 @@ class TerritoryScopeService
      */
     public function getAccessibleBlockIds(User $user): ?array
     {
-        if (! $this->isFarmerScoped($user)) {
+        if (! $this->isScoped($user)) {
             return null;
         }
 

@@ -20,10 +20,21 @@ class DurianVariety extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
+        'code',
         'name',
         'origin',
         'description',
+        'characteristics',
+        'photo_path',
+        'is_active',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+        ];
+    }
 
     public function trees(): HasMany
     {

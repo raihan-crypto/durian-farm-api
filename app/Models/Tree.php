@@ -21,6 +21,26 @@ class Tree extends Model
 
     protected $keyType = 'string';
 
+    /**
+     * Tree statuses with their Indonesian labels (SRS 4.4).
+     *
+     * @var array<string, string>
+     */
+    public const STATUS_LABELS = [
+        'active' => 'Aktif',
+        'inactive' => 'Tidak aktif',
+        'unproductive' => 'Tidak produktif',
+        'sick' => 'Sakit',
+        'monitoring' => 'Dalam pemantauan',
+        'dead' => 'Mati',
+        'removed' => 'Ditebang',
+    ];
+
+    /**
+     * Activity type used in activity_photos for tree photos.
+     */
+    public const PHOTO_ACTIVITY_TYPE = 'tree';
+
     protected $fillable = [
         'garden_id',
         'variety_id',
@@ -98,5 +118,32 @@ class Tree extends Model
     public function harvestRecords(): HasMany
     {
         return $this->hasMany(HarvestRecord::class, 'tree_id')->orderBy('created_at', 'desc');
+    }
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(ActivityPhoto::class, 'activity_id')
+            ->where('activity_type', self::PHOTO_ACTIVITY_TYPE)
+            ->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Get the human readable status label.
+     */
+    public function statusLabel(): string
+    {
+        return self::STATUS_LABELS[$this->status] ?? (string) $this->status;
+    }
+
+    /**
+     * Get the tree age in months based on planting date or recorded planting age.
+     */
+    public function ageInMonths(): ?int
+    {
+        if ($this->planted_at !== null) {
+            return (int) $this->planted_at->diffInMonths(now());
+        }
+
+        return $this->planting_age_months;
     }
 }

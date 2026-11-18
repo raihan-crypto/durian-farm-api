@@ -84,4 +84,27 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Weather API Integration (SRS Bab 13)
+    |--------------------------------------------------------------------------
+    */
+
+    'weather' => [
+        'provider' => env('WEATHER_PROVIDER', 'open-meteo'),
+        'base_url' => env('WEATHER_API_BASE_URL', 'https://api.open-meteo.com/v1/forecast'),
+        'cache_ttl_minutes' => (int) env('WEATHER_CACHE_TTL_MINUTES', 30),
+        'timeout_seconds' => (int) env('WEATHER_TIMEOUT_SECONDS', 10),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | IoT Telemetry Preparation (SRS Bab 14)
+    |--------------------------------------------------------------------------
+    */
+
+    'iot' => [
+        'ingest_key' => env('IOT_INGEST_KEY'),
+    ],
+
 ];

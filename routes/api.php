@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\Api\V1\ActivityPhotoController;
 use App\Http\Controllers\Api\V1\AgriculturalProductController;
+use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BlockController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DurianVarietyController;
 use App\Http\Controllers\Api\V1\FarmerController;
 use App\Http\Controllers\Api\V1\FertilizationRecordController;
@@ -14,6 +16,8 @@ use App\Http\Controllers\Api\V1\HarvestRecordController;
 use App\Http\Controllers\Api\V1\HarvestReportController;
 use App\Http\Controllers\Api\V1\HarvestSeasonController;
 use App\Http\Controllers\Api\V1\HarvestSessionController;
+use App\Http\Controllers\Api\V1\IotDeviceController;
+use App\Http\Controllers\Api\V1\MonitoringAreaController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\OwnerController;
 use App\Http\Controllers\Api\V1\ProductCategoryController;
@@ -27,6 +31,7 @@ use App\Http\Controllers\Api\V1\TreePhotoController;
 use App\Http\Controllers\Api\V1\TreeQrCodeController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VillageController;
+use App\Http\Controllers\Api\V1\WeatherController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -36,6 +41,9 @@ Route::prefix('v1')->group(function () {
     // Public tree information via QR Code token (rate-limited, SRS 10 & 16.3)
     Route::get('/public/trees/{token}', [PublicTreeController::class, 'show'])
         ->middleware('throttle:public-tree');
+
+    // IoT telemetry ingest endpoint authenticated via X-IoT-Ingest-Key (SRS 14.4)
+    Route::post('/iot/telemetry', [IotDeviceController::class, 'ingestTelemetry']);
 
     // Protected API endpoints
     Route::middleware('auth:sanctum')->group(function () {
@@ -220,5 +228,31 @@ Route::prefix('v1')->group(function () {
         Route::post('/sync/pull', [SyncController::class, 'changes'])->middleware('permission:sync.access');
         Route::post('/sync/push', [SyncController::class, 'push'])->middleware('permission:sync.access');
         Route::get('/sync/logs', [SyncController::class, 'logs'])->middleware('permission:sync.access,audit.view');
+
+        // Dashboard summary (SRS 9.1 & 11.3)
+        Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
+
+        // Weather API integration (SRS Bab 13 & 16.3)
+        Route::get('/weather', [WeatherController::class, 'index'])->middleware('permission:territory.view');
+        Route::get('/weather/latest', [WeatherController::class, 'latest'])->middleware('permission:territory.view');
+        Route::get('/weather/forecast', [WeatherController::class, 'forecast'])->middleware('permission:territory.view');
+        Route::post('/weather/fetch', [WeatherController::class, 'fetch'])->middleware('permission:territory.manage');
+
+        // IoT preparation: monitoring areas & devices (SRS Bab 14)
+        Route::get('/monitoring-areas', [MonitoringAreaController::class, 'index'])->middleware('permission:territory.view');
+        Route::post('/monitoring-areas', [MonitoringAreaController::class, 'store'])->middleware('permission:territory.manage');
+        Route::get('/monitoring-areas/{id}', [MonitoringAreaController::class, 'show'])->middleware('permission:territory.view');
+        Route::put('/monitoring-areas/{id}', [MonitoringAreaController::class, 'update'])->middleware('permission:territory.manage');
+        Route::delete('/monitoring-areas/{id}', [MonitoringAreaController::class, 'destroy'])->middleware('permission:territory.manage');
+
+        Route::get('/iot-devices', [IotDeviceController::class, 'index'])->middleware('permission:territory.view');
+        Route::post('/iot-devices', [IotDeviceController::class, 'store'])->middleware('permission:territory.manage');
+        Route::get('/iot-devices/{id}', [IotDeviceController::class, 'show'])->middleware('permission:territory.view');
+        Route::put('/iot-devices/{id}', [IotDeviceController::class, 'update'])->middleware('permission:territory.manage');
+        Route::get('/iot-devices/{id}/telemetry', [IotDeviceController::class, 'telemetry'])->middleware('permission:territory.view');
+
+        // Immutable audit logs (SRS Bab 17)
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware('permission:audit.view');
+        Route::get('/audit-logs/{id}', [AuditLogController::class, 'show'])->middleware('permission:audit.view');
     });
 });

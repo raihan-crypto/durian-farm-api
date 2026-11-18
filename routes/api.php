@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\ProductCategoryController;
 use App\Http\Controllers\Api\V1\PublicTreeController;
 use App\Http\Controllers\Api\V1\RbacController;
 use App\Http\Controllers\Api\V1\SprayingRecordController;
+use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\TreeController;
 use App\Http\Controllers\Api\V1\TreeMeasurementController;
 use App\Http\Controllers\Api\V1\TreePhotoController;
@@ -212,5 +213,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/reports/harvest/summary', [HarvestReportController::class, 'summary'])->middleware('permission:reports.view,harvest.view');
         Route::get('/reports/harvest/comparison', [HarvestReportController::class, 'comparison'])->middleware('permission:reports.view,harvest.view');
         Route::get('/reports/harvest/export', [HarvestReportController::class, 'export'])->middleware('permission:reports.export');
+
+        // Offline-first mobile sync engine (SRS Bab 12 & 16.3)
+        Route::get('/sync/bootstrap', [SyncController::class, 'bootstrap'])->middleware('permission:sync.access');
+        Route::get('/sync/changes', [SyncController::class, 'changes'])->middleware('permission:sync.access');
+        Route::post('/sync/pull', [SyncController::class, 'changes'])->middleware('permission:sync.access');
+        Route::post('/sync/push', [SyncController::class, 'push'])->middleware('permission:sync.access');
+        Route::get('/sync/logs', [SyncController::class, 'logs'])->middleware('permission:sync.access,audit.view');
     });
 });

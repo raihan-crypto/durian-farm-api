@@ -35,6 +35,7 @@ use App\Models\TreeQrCode;
 use App\Models\User;
 use App\Models\Village;
 use App\Models\WeatherRecord;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -373,5 +374,26 @@ class DatabaseBaselineTest extends TestCase
         } finally {
             DB::rollBack();
         }
+    }
+
+    public function test_database_seeder_runs_successfully(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $this->assertDatabaseHas('villages', [
+            'name' => 'Desa Cikidang',
+            'district' => 'Cikidang',
+            'regency' => 'Sukabumi',
+            'province' => 'Jawa Barat',
+        ]);
+        $this->assertDatabaseHas('users', [
+            'email' => 'superadmin@durianfarm.test',
+        ]);
+        $this->assertDatabaseHas('users', [
+            'email' => 'petani@durianfarm.test',
+        ]);
+        $this->assertDatabaseHas('trees', [
+            'tree_code' => 'MK-001',
+        ]);
     }
 }

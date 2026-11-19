@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Models\Village;
 use App\Services\TreeQrCodeService;
 use Database\Seeders\RbacSeeder;
+use Database\Seeders\RoleAccountsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -228,5 +229,47 @@ class TreeQrCodeAndPublicPageTest extends TestCase
         $token = str_repeat('a', TreeQrCodeService::TOKEN_LENGTH);
 
         $this->getJson("/api/v1/public/trees/{$token}")->assertStatus(429);
+    }
+
+    public function test_generate_tree_qr_command_generates_and_regenerates_qr_codes(): void
+    {
+        $this->artisan('durian:generate-qr', ['--tree' => $this->tree->tree_code])
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('tree_qr_codes', [
+            'tree_id' => $this->tree->id,
+            'is_active' => true,
+        ]);
+
+        $this->artisan('durian:generate-qr', ['--tree' => $this->tree->tree_code, '--force' => true])
+            ->assertSuccessful();
+    }
+
+    public function test_role_accounts_seeder_creates_all_roles_and_linked_profiles(): void
+    {
+        $this->seed(RoleAccountsSeeder::class);
+
+        $expectedEmails = [
+            'superadmin@durianfarm.test' => 'super_admin',
+            'admin@durianfarm.test' => 'admin',
+            'admin_kebun@durianfarm.test' => 'admin',
+            'manager@durianfarm.test' => 'plantation_manager',
+            'petani@durianfarm.test' => 'farmer',
+            'pemilik@durianfarm.test' => 'owner',
+        ];
+
+        foreach ($expectedEmails as $email => $roleName) {
+            $user = User::where('email', $email)->first();
+            $this->assertNotNull($user, "User with email {$email} should exist");
+            $this->assertTrue($user->hasRole($roleName), "User {$email} should have role {$roleName}");
+            $this->assertTrue($user->is_active);
+        }
+
+        $farmerUser = User::where('email', 'petani@durianfarm.test')->first();
+        $this->assertNotNull($farmerUser->farmerProfile);
+        $this->assertTrue($farmerUser->farmerProfile->gardens()->exists());
+
+        $ownerUser = User::where('email', 'pemilik@durianfarm.test')->first();
+        $this->assertTrue($ownerUser->hasRole('owner'));
     }
 }

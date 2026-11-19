@@ -4,7 +4,9 @@ namespace App\Filament\Resources\Trees;
 
 use App\Filament\Resources\Trees\Pages\ManageTrees;
 use App\Models\Tree;
+use App\Services\TreeQrCodeService;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
@@ -97,6 +99,25 @@ class TreeResource extends Resource
                 SelectFilter::make('status')->label('Status')->options(Tree::STATUS_LABELS),
             ])
             ->recordActions([
+                Action::make('qr_code')
+                    ->label('QR Code')
+                    ->icon(Heroicon::OutlinedQrCode)
+                    ->color('info')
+                    ->modalHeading(fn (Tree $record) => "QR Code Pohon - {$record->tree_code}")
+                    ->modalContent(function (Tree $record) {
+                        $qrService = app(TreeQrCodeService::class);
+                        $qrCode = $qrService->ensureForTree($record);
+                        $svg = $qrService->render($qrCode, 'svg', 220)->getString();
+
+                        return view('filament.components.qr-modal', [
+                            'svg' => $svg,
+                            'url' => $qrCode->qr_code,
+                            'token' => $qrCode->public_token,
+                            'tree' => $record->loadMissing(['garden', 'variety']),
+                        ]);
+                    })
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup'),
                 EditAction::make(),
                 DeleteAction::make(),
             ]);

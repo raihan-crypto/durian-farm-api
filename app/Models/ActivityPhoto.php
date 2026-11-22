@@ -25,10 +25,24 @@ class ActivityPhoto extends Model
         'activity_type',
         'activity_id',
         'file_path',
+        'thumbnail_path',
         'file_name',
+        'mime_type',
+        'file_size_bytes',
+        'width',
+        'height',
         'caption',
         'uploaded_by',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'file_size_bytes' => 'integer',
+            'width' => 'integer',
+            'height' => 'integer',
+        ];
+    }
 
     public function uploader(): BelongsTo
     {

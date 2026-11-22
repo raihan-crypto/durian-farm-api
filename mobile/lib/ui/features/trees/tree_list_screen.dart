@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import '../../../data/models/models.dart';
 import '../../../data/repositories/offline_sync_repository.dart';
@@ -19,6 +20,7 @@ class TreeListScreen extends StatefulWidget {
 
 class _TreeListScreenState extends State<TreeListScreen> {
   final _searchController = TextEditingController();
+  Timer? _debounceTimer;
   List<LocalTree> _trees = const [];
   bool _isLoading = true;
 
@@ -30,6 +32,7 @@ class _TreeListScreenState extends State<TreeListScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -57,7 +60,12 @@ class _TreeListScreenState extends State<TreeListScreen> {
               hintText: 'Cari kode pohon, nama, atau varietas...',
               prefixIcon: Icon(Icons.search),
             ),
-            onChanged: _loadTrees,
+            onChanged: (val) {
+              _debounceTimer?.cancel();
+              _debounceTimer = Timer(const Duration(milliseconds: 50), () {
+                _loadTrees(val);
+              });
+            },
           ),
         ),
         Expanded(

@@ -24,6 +24,28 @@ class TerritoryScopeService
     ];
 
     /**
+     * In-memory memoization caches per request lifecycle.
+     *
+     * @var array<string, bool>
+     */
+    protected array $memoizedIsScoped = [];
+
+    /**
+     * @var array<string, array<int, string>|null>
+     */
+    protected array $memoizedGardenIds = [];
+
+    /**
+     * @var array<string, array<int, string>|null>
+     */
+    protected array $memoizedBlockIds = [];
+
+    /**
+     * @var array<string, array<int, string>|null>
+     */
+    protected array $memoizedVillageIds = [];
+
+    /**
      * Determine whether the user's territory visibility must be scoped to their farmer assignments.
      *
      * Users without an unrestricted role are always scoped (deny-by-default). Users that have
@@ -32,17 +54,21 @@ class TerritoryScopeService
      */
     public function isScoped(User $user): bool
     {
+        if (isset($this->memoizedIsScoped[$user->id])) {
+            return $this->memoizedIsScoped[$user->id];
+        }
+
         $user->loadMissing('roles');
 
         $roleNames = $user->roles->pluck('name')->all();
 
         foreach (self::UNRESTRICTED_ROLES as $role) {
             if (in_array($role, $roleNames, true)) {
-                return false;
+                return $this->memoizedIsScoped[$user->id] = false;
             }
         }
 
-        return true;
+        return $this->memoizedIsScoped[$user->id] = true;
     }
 
     /**
@@ -95,14 +121,18 @@ class TerritoryScopeService
      */
     public function getAccessibleGardenIds(User $user): ?array
     {
+        if (array_key_exists($user->id, $this->memoizedGardenIds)) {
+            return $this->memoizedGardenIds[$user->id];
+        }
+
         if (! $this->isScoped($user)) {
-            return null;
+            return $this->memoizedGardenIds[$user->id] = null;
         }
 
         $farmer = $user->farmerProfile;
 
         if (! $farmer) {
-            return [];
+            return $this->memoizedGardenIds[$user->id] = [];
         }
 
         $directGardenIds = $this->getActiveDirectGardenIdsForFarmer($farmer);
@@ -112,7 +142,7 @@ class TerritoryScopeService
             ? []
             : Garden::query()->whereIn('block_id', $assignedBlockIds)->pluck('id')->all();
 
-        return array_values(array_unique(array_merge($directGardenIds, $blockGardenIds)));
+        return $this->memoizedGardenIds[$user->id] = array_values(array_unique(array_merge($directGardenIds, $blockGardenIds)));
     }
 
     /**
@@ -124,14 +154,18 @@ class TerritoryScopeService
      */
     public function getAccessibleBlockIds(User $user): ?array
     {
+        if (array_key_exists($user->id, $this->memoizedBlockIds)) {
+            return $this->memoizedBlockIds[$user->id];
+        }
+
         if (! $this->isScoped($user)) {
-            return null;
+            return $this->memoizedBlockIds[$user->id] = null;
         }
 
         $farmer = $user->farmerProfile;
 
         if (! $farmer) {
-            return [];
+            return $this->memoizedBlockIds[$user->id] = [];
         }
 
         $assignedBlockIds = $this->getActiveBlockIdsForFarmer($farmer);
@@ -141,7 +175,7 @@ class TerritoryScopeService
             ? []
             : Garden::query()->whereIn('id', $directGardenIds)->pluck('block_id')->all();
 
-        return array_values(array_unique(array_merge($assignedBlockIds, $parentBlockIds)));
+        return $this->memoizedBlockIds[$user->id] = array_values(array_unique(array_merge($assignedBlockIds, $parentBlockIds)));
     }
 
     /**
@@ -152,17 +186,21 @@ class TerritoryScopeService
      */
     public function getAccessibleVillageIds(User $user): ?array
     {
+        if (array_key_exists($user->id, $this->memoizedVillageIds)) {
+            return $this->memoizedVillageIds[$user->id];
+        }
+
         $blockIds = $this->getAccessibleBlockIds($user);
 
         if ($blockIds === null) {
-            return null;
+            return $this->memoizedVillageIds[$user->id] = null;
         }
 
         if (empty($blockIds)) {
-            return [];
+            return $this->memoizedVillageIds[$user->id] = [];
         }
 
-        return Block::query()
+        return $this->memoizedVillageIds[$user->id] = Block::query()
             ->whereIn('id', $blockIds)
             ->pluck('village_id')
             ->unique()

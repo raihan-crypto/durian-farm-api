@@ -32,6 +32,7 @@ class CheckPermission
             return $next($request);
         }
 
+        $user->loadMissing('roles.permissions');
         $userRoles = $user->roles->pluck('name')->all();
 
         // Super admin bypasses permission checks

@@ -23,6 +23,7 @@ use App\Models\TreeMeasurement;
 use App\Models\User;
 use App\Models\Village;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -111,20 +112,20 @@ class SyncEngineService
             ->orderBy('name')
             ->get(['id', 'block_id', 'name', 'area_hectares', 'address', 'latitude', 'longitude', 'description', 'updated_at']);
 
-        $varieties = DurianVariety::query()
+        $varieties = Cache::remember('durian:master:varieties:active', 3600, fn () => DurianVariety::query()
             ->where('is_active', true)
             ->orderBy('name')
-            ->get(['id', 'code', 'name', 'origin', 'description', 'characteristics', 'is_active', 'updated_at']);
+            ->get(['id', 'code', 'name', 'origin', 'description', 'characteristics', 'is_active', 'updated_at']));
 
-        $categories = ProductCategory::query()
+        $categories = Cache::remember('durian:master:categories:active', 3600, fn () => ProductCategory::query()
             ->where('is_active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'description', 'is_active', 'updated_at']);
+            ->get(['id', 'name', 'description', 'is_active', 'updated_at']));
 
-        $products = AgriculturalProduct::query()
+        $products = Cache::remember('durian:master:products:active', 3600, fn () => AgriculturalProduct::query()
             ->where('is_active', true)
             ->orderBy('name')
-            ->get(['id', 'category_id', 'name', 'brand', 'active_ingredient', 'unit', 'description', 'is_active', 'updated_at']);
+            ->get(['id', 'category_id', 'name', 'brand', 'active_ingredient', 'unit', 'description', 'is_active', 'updated_at']));
 
         $trees = Tree::query()
             ->with('qrCode:id,tree_id,public_token,qr_code,is_active')

@@ -105,6 +105,13 @@ class ActivityPhotoManagementTest extends TestCase
         $photoId = $uploadResp->json('data.id');
         $photo = ActivityPhoto::findOrFail($photoId);
         Storage::disk('public')->assertExists($photo->file_path);
+        $this->assertNotNull($photo->thumbnail_path);
+        Storage::disk('public')->assertExists($photo->thumbnail_path);
+        $this->assertEquals('image/webp', $photo->mime_type);
+        $this->assertGreaterThan(0, $photo->file_size_bytes);
+        $this->assertGreaterThan(0, $photo->width);
+        $this->assertGreaterThan(0, $photo->height);
+        $this->assertNotNull($uploadResp->json('data.thumbnail_url'));
 
         // List by activity target
         $this->withHeader('Authorization', 'Bearer '.$this->adminToken)

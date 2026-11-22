@@ -226,6 +226,7 @@ class OfflineSyncRepository {
           baseUrl: baseUrl,
           token: session.token,
           deviceIdentifier: deviceIdentifier,
+          idempotencyKey: 'batch-${items.first.clientTransactionId}-${items.length}',
           operations: items
               .map((i) => {
                     'client_transaction_id': i.clientTransactionId,
@@ -333,6 +334,7 @@ class OfflineSyncRepository {
           activityId: photo.activityId,
           filePath: photo.localFilePath,
           caption: photo.caption,
+          idempotencyKey: 'photo-${photo.id}',
         );
         photosUploaded++;
         await db.update(

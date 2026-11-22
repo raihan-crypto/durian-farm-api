@@ -62,10 +62,16 @@ class ApiClient {
     required String token,
     required String deviceIdentifier,
     required List<Map<String, Object?>> operations,
+    String? idempotencyKey,
   }) async {
+    final headers = _authHeaders(token);
+    if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
+      headers['X-Idempotency-Key'] = idempotencyKey;
+    }
+
     final response = await _http.post(
       Uri.parse('$baseUrl/api/v1/sync/push'),
-      headers: _authHeaders(token),
+      headers: headers,
       body: jsonEncode({
         'device_identifier': deviceIdentifier,
         'operations': operations,
@@ -96,6 +102,7 @@ class ApiClient {
     required String activityId,
     required String filePath,
     String? caption,
+    String? idempotencyKey,
   }) async {
     final request = http.MultipartRequest(
       'POST',
@@ -105,6 +112,10 @@ class ApiClient {
       ..headers[HttpHeaders.acceptHeader] = 'application/json'
       ..fields['activity_type'] = activityType
       ..fields['activity_id'] = activityId;
+
+    if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
+      request.headers['X-Idempotency-Key'] = idempotencyKey;
+    }
 
     if (caption != null && caption.isNotEmpty) {
       request.fields['caption'] = caption;

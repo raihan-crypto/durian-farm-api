@@ -35,8 +35,9 @@ use App\Http\Controllers\Api\V1\WeatherController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
-    // Public authentication endpoint
-    Route::post('/auth/login', [AuthController::class, 'login']);
+    // Public authentication endpoint (rate-limited against brute force)
+    Route::post('/auth/login', [AuthController::class, 'login'])
+        ->middleware('throttle:auth-login');
 
     // Public tree information via QR Code token (rate-limited, SRS 10 & 16.3)
     Route::get('/public/trees/{token}', [PublicTreeController::class, 'show'])
@@ -193,7 +194,8 @@ Route::prefix('v1')->group(function () {
 
         // Centralized polymorphic activity photos
         Route::get('/activity-photos', [ActivityPhotoController::class, 'index'])->middleware('permission:activities.view');
-        Route::post('/activity-photos', [ActivityPhotoController::class, 'store'])->middleware('permission:activities.record,trees.manage,trees.measure');
+        Route::post('/activity-photos', [ActivityPhotoController::class, 'store'])
+            ->middleware(['permission:activities.record,trees.manage,trees.measure', 'throttle:photo-upload', 'idempotent']);
         Route::get('/activity-photos/{id}', [ActivityPhotoController::class, 'show'])->middleware('permission:activities.view');
         Route::delete('/activity-photos/{id}', [ActivityPhotoController::class, 'destroy'])->middleware('permission:activities.record,trees.manage');
 
@@ -226,7 +228,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/sync/bootstrap', [SyncController::class, 'bootstrap'])->middleware('permission:sync.access');
         Route::get('/sync/changes', [SyncController::class, 'changes'])->middleware('permission:sync.access');
         Route::post('/sync/pull', [SyncController::class, 'changes'])->middleware('permission:sync.access');
-        Route::post('/sync/push', [SyncController::class, 'push'])->middleware('permission:sync.access');
+        Route::post('/sync/push', [SyncController::class, 'push'])
+            ->middleware(['permission:sync.access', 'throttle:sync-batch', 'idempotent']);
         Route::get('/sync/logs', [SyncController::class, 'logs'])->middleware('permission:sync.access,audit.view');
 
         // Dashboard summary (SRS 9.1 & 11.3)

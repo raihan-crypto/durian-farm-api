@@ -100,7 +100,7 @@ class AgriculturalProductManagementTest extends TestCase
             ->deleteJson("/api/v1/product-categories/{$emptyCategory->id}")
             ->assertStatus(200);
 
-        $this->assertDatabaseMissing('product_categories', ['id' => $emptyCategory->id]);
+        $this->assertSoftDeleted('product_categories', ['id' => $emptyCategory->id]);
     }
 
     public function test_admin_can_crud_agricultural_products_and_protect_used_products(): void
@@ -163,7 +163,7 @@ class AgriculturalProductManagementTest extends TestCase
             ->deleteJson("/api/v1/agricultural-products/{$unused->id}")
             ->assertStatus(200);
 
-        $this->assertDatabaseMissing('agricultural_products', ['id' => $unused->id]);
+        $this->assertSoftDeleted('agricultural_products', ['id' => $unused->id]);
     }
 
     public function test_farmer_can_view_products_but_cannot_manage_them(): void

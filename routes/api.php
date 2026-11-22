@@ -82,10 +82,12 @@ Route::prefix('v1')->group(function () {
 
         // Blocks management & block farmer assignments
         Route::get('/blocks', [BlockController::class, 'index'])->middleware('permission:territory.view');
-        Route::post('/blocks', [BlockController::class, 'store'])->middleware('permission:territory.manage');
+        Route::post('/blocks', [BlockController::class, 'store'])->middleware('permission:territory.manage,blocks.request');
         Route::get('/blocks/{id}', [BlockController::class, 'show'])->middleware('permission:territory.view');
         Route::put('/blocks/{id}', [BlockController::class, 'update'])->middleware('permission:territory.manage');
-        Route::delete('/blocks/{id}', [BlockController::class, 'destroy'])->middleware('permission:territory.manage');
+        Route::delete('/blocks/{id}', [BlockController::class, 'destroy'])->middleware('permission:territory.manage,blocks.request');
+        Route::post('/blocks/{id}/approve', [BlockController::class, 'approve'])->middleware('permission:territory.manage');
+        Route::post('/blocks/{id}/reject', [BlockController::class, 'reject'])->middleware('permission:territory.manage');
         Route::get('/blocks/{id}/farmers', [BlockController::class, 'farmers'])->middleware('permission:territory.view');
         Route::post('/blocks/{id}/farmers', [BlockController::class, 'assignFarmer'])->middleware('permission:ownership.manage');
         Route::put('/blocks/{id}/farmers/{assignmentId}', [BlockController::class, 'updateFarmerAssignment'])->middleware('permission:ownership.manage');

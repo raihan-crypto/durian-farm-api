@@ -40,7 +40,7 @@ class CheckPermission
             return $next($request);
         }
 
-        $userPermissions = $user->roles->flatMap->permissions->pluck('name')->all();
+        $userPermissions = $user->roles->flatMap(fn ($role) => $role->permissions)->pluck('name')->all();
 
         foreach ($permissions as $permission) {
             if (in_array($permission, $userPermissions, true)) {

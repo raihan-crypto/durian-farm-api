@@ -84,7 +84,7 @@ class UserAndOrganizationManagementTest extends TestCase
             ->deleteJson("/api/v1/organizations/{$org->id}");
 
         $deleteResponse->assertStatus(200);
-        $this->assertDatabaseMissing('organizations', ['id' => $org->id]);
+        $this->assertSoftDeleted('organizations', ['id' => $org->id]);
     }
 
     public function test_can_create_user_with_assigned_role(): void

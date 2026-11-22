@@ -136,7 +136,7 @@ class TerritoryManagementTest extends TestCase
             ->deleteJson("/api/v1/villages/{$emptyVillage->id}");
 
         $deleteSuccess->assertStatus(200);
-        $this->assertDatabaseMissing('villages', ['id' => $emptyVillage->id]);
+        $this->assertSoftDeleted('villages', ['id' => $emptyVillage->id]);
     }
 
     public function test_admin_can_crud_blocks_and_prevent_deleting_block_with_gardens(): void
@@ -192,7 +192,7 @@ class TerritoryManagementTest extends TestCase
             ->deleteJson("/api/v1/blocks/{$emptyBlock->id}")
             ->assertStatus(200);
 
-        $this->assertDatabaseMissing('blocks', ['id' => $emptyBlock->id]);
+        $this->assertSoftDeleted('blocks', ['id' => $emptyBlock->id]);
     }
 
     public function test_admin_can_crud_gardens_with_inline_multi_owners_and_farmers(): void
@@ -270,7 +270,7 @@ class TerritoryManagementTest extends TestCase
             ->deleteJson("/api/v1/gardens/{$gardenId}")
             ->assertStatus(200);
 
-        $this->assertDatabaseMissing('gardens', ['id' => $gardenId]);
+        $this->assertSoftDeleted('gardens', ['id' => $gardenId]);
     }
 
     public function test_farmer_territory_access_is_strictly_scoped_to_active_assignments(): void

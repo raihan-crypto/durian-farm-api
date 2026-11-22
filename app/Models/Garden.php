@@ -9,10 +9,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Garden extends Model
 {
-    use Auditable, HasFactory, HasUuids;
+    use Auditable, HasFactory, HasUuids, SoftDeletes;
 
     protected $table = 'gardens';
 
@@ -25,11 +27,13 @@ class Garden extends Model
     protected $fillable = [
         'block_id',
         'name',
+        'garden_code',
         'area_hectares',
         'address',
         'latitude',
         'longitude',
         'description',
+        'status',
     ];
 
     protected function casts(): array
@@ -39,6 +43,19 @@ class Garden extends Model
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Garden $garden) {
+            if (empty($garden->garden_code) && $garden->block_id) {
+                $count = static::withTrashed()->where('block_id', $garden->block_id)->count();
+                $garden->garden_code = sprintf('%02d', $count + 1);
+            }
+            if (empty($garden->status)) {
+                $garden->status = 'active';
+            }
+        });
     }
 
     public function block(): BelongsTo
@@ -93,6 +110,21 @@ class Garden extends Model
     public function harvestRecords(): HasMany
     {
         return $this->hasMany(HarvestRecord::class, 'garden_id');
+    }
+
+    public function fertilizationRecords(): HasManyThrough
+    {
+        return $this->hasManyThrough(FertilizationRecord::class, Tree::class, 'garden_id', 'tree_id');
+    }
+
+    public function sprayingRecords(): HasManyThrough
+    {
+        return $this->hasManyThrough(SprayingRecord::class, Tree::class, 'garden_id', 'tree_id');
+    }
+
+    public function treeMeasurements(): HasManyThrough
+    {
+        return $this->hasManyThrough(TreeMeasurement::class, Tree::class, 'garden_id', 'tree_id');
     }
 
     public function weatherRecords(): HasMany

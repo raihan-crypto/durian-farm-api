@@ -143,7 +143,7 @@ class TreeManagementTest extends TestCase
             ->deleteJson("/api/v1/trees/{$treeId}")
             ->assertStatus(200);
 
-        $this->assertDatabaseMissing('trees', ['id' => $treeId]);
+        $this->assertSoftDeleted('trees', ['id' => $treeId]);
     }
 
     public function test_historical_measurements_and_tree_photos_preserve_history(): void

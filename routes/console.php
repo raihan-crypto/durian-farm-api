@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('durian:sync-weather')->hourly()->withoutOverlapping();
+Schedule::command('durian:prune-soft-deleted')->daily();

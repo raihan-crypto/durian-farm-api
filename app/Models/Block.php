@@ -10,10 +10,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Block extends Model
 {
-    use Auditable, HasFactory, HasUuids;
+    use Auditable, HasFactory, HasUuids, SoftDeletes;
 
     protected $table = 'blocks';
 
@@ -26,8 +27,11 @@ class Block extends Model
     protected $fillable = [
         'village_id',
         'name',
+        'block_code',
         'area_hectares',
         'description',
+        'approval_status',
+        'requested_by',
     ];
 
     protected function casts(): array
@@ -37,9 +41,27 @@ class Block extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (Block $block) {
+            if (empty($block->block_code) && $block->village_id) {
+                $count = static::withTrashed()->where('village_id', $block->village_id)->count();
+                $block->block_code = sprintf('%02d', $count + 1);
+            }
+            if (empty($block->approval_status)) {
+                $block->approval_status = 'approved';
+            }
+        });
+    }
+
     public function village(): BelongsTo
     {
         return $this->belongsTo(Village::class, 'village_id');
+    }
+
+    public function requester(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'requested_by');
     }
 
     public function gardens(): HasMany

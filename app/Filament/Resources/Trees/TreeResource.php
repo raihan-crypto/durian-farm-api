@@ -9,17 +9,25 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
 
 class TreeResource extends Resource
@@ -62,9 +70,22 @@ class TreeResource extends Resource
             Select::make('garden_id')->label('Kebun')->relationship('garden', 'name')->searchable()->preload()->required(),
             Select::make('variety_id')->label('Varietas')->relationship('variety', 'name')->searchable()->preload(),
             TextInput::make('tree_code')->label('Kode Pohon')->required()->maxLength(100),
+            TextInput::make('tree_identity_number')
+                ->label('ID / NIK Pohon')
+                ->disabled()
+                ->dehydrated(false)
+                ->helperText('Otomatis di-generate sistem: [Desa]-[Blok]-[Kebun]-[Varietas]-[NomorUrut]'),
             TextInput::make('tree_name')->label('Nama / Label Pohon')->maxLength(150),
             DatePicker::make('planted_at')->label('Tanggal Tanam'),
             Select::make('status')->label('Status')->options(Tree::STATUS_LABELS)->default('active')->required(),
+            FileUpload::make('photo_path')
+                ->label('Foto Pohon (Opsional)')
+                ->image()
+                ->disk('public')
+                ->directory('trees')
+                ->maxSize(5120)
+                ->columnSpanFull()
+                ->helperText('Format JPG, PNG, atau WebP maksimal 5MB. Tidak wajib.'),
             TextInput::make('latitude')->label('Latitude')->numeric(),
             TextInput::make('longitude')->label('Longitude')->numeric(),
             Textarea::make('notes')->label('Catatan')->columnSpanFull(),
@@ -75,6 +96,8 @@ class TreeResource extends Resource
     {
         return $table
             ->columns([
+                ImageColumn::make('photo_path')->label('Foto')->disk('public')->circular()->placeholder('-'),
+                TextColumn::make('tree_identity_number')->label('NIK Pohon')->searchable()->sortable()->badge()->color('primary'),
                 TextColumn::make('tree_code')->label('Kode')->searchable()->sortable()->badge(),
                 TextColumn::make('tree_name')->label('Nama')->searchable()->placeholder('-'),
                 TextColumn::make('variety.name')->label('Varietas')->sortable()->placeholder('-'),
@@ -97,6 +120,7 @@ class TreeResource extends Resource
                 SelectFilter::make('garden_id')->label('Kebun')->relationship('garden', 'name'),
                 SelectFilter::make('variety_id')->label('Varietas')->relationship('variety', 'name'),
                 SelectFilter::make('status')->label('Status')->options(Tree::STATUS_LABELS),
+                TrashedFilter::make(),
             ])
             ->recordActions([
                 Action::make('qr_code')
@@ -118,8 +142,19 @@ class TreeResource extends Resource
                     })
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup'),
+                ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),
+                RestoreAction::make(),
+                ForceDeleteAction::make()->visible(fn () => auth()->user()?->hasRole('super_admin')),
+            ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
             ]);
     }
 

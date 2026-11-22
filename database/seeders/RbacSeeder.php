@@ -25,6 +25,7 @@ class RbacSeeder extends Seeder
             // Territory
             ['name' => 'territory.manage', 'description' => 'Mengelola wilayah, blok, dan kebun'],
             ['name' => 'territory.view', 'description' => 'Melihat data wilayah, blok, dan kebun'],
+            ['name' => 'blocks.request', 'description' => 'Mengajukan penambahan atau penghapusan blok oleh pemerintah desa'],
             ['name' => 'ownership.manage', 'description' => 'Mengelola kepemilikan dan penugasan'],
             ['name' => 'ownership.view', 'description' => 'Melihat kepemilikan dan penugasan'],
 
@@ -78,15 +79,17 @@ class RbacSeeder extends Seeder
         })->pluck('id');
         $admin->permissions()->sync($adminPermissions);
 
-        // 3. Plantation Manager
-        $manager = Role::firstOrCreate(
-            ['name' => 'plantation_manager'],
-            ['description' => 'Pengelola Perkebunan yang memantau kebun dan aktivitas petani']
+        // 3. Petani (Pengelola Kebun)
+        $petani = Role::firstOrCreate(
+            ['name' => 'petani'],
+            ['description' => 'Petani (Pengelola Kebun) yang memiliki/mengelola kebun, menambahkan kebun dan tenaga kerja']
         );
-        $managerPermissions = collect($permissionModels)->filter(function ($item, $key) {
+        $petaniPermissions = collect($permissionModels)->filter(function ($item, $key) {
             return in_array($key, [
                 'territory.view',
+                'territory.manage',
                 'ownership.view',
+                'ownership.manage',
                 'trees.view',
                 'trees.manage',
                 'trees.measure',
@@ -99,14 +102,14 @@ class RbacSeeder extends Seeder
                 'reports.export',
             ], true);
         })->pluck('id');
-        $manager->permissions()->sync($managerPermissions);
+        $petani->permissions()->sync($petaniPermissions);
 
-        // 4. Farmer
-        $farmer = Role::firstOrCreate(
-            ['name' => 'farmer'],
-            ['description' => 'Petani atau Pekerja Lapangan untuk pencatatan lapangan dan sinkronisasi']
+        // 4. Tenaga Kerja Kebun (Pekerja Lapangan Operasional - Aplikasi Mobile)
+        $tenagaKerja = Role::firstOrCreate(
+            ['name' => 'tenaga_kerja'],
+            ['description' => 'Tenaga Kerja Kebun untuk pencatatan lapangan operasional dan sinkronisasi mobile']
         );
-        $farmerPermissions = collect($permissionModels)->filter(function ($item, $key) {
+        $tenagaKerjaPermissions = collect($permissionModels)->filter(function ($item, $key) {
             return in_array($key, [
                 'territory.view',
                 'trees.view',
@@ -119,22 +122,33 @@ class RbacSeeder extends Seeder
                 'sync.access',
             ], true);
         })->pluck('id');
-        $farmer->permissions()->sync($farmerPermissions);
+        $tenagaKerja->permissions()->sync($tenagaKerjaPermissions);
 
-        // 5. Owner
-        $owner = Role::firstOrCreate(
-            ['name' => 'owner'],
-            ['description' => 'Pemilik Kebun untuk memantau pohon dan laporan panen miliknya']
+        // 5. Pemerintah Desa (Perangkat Desa)
+        $pemerintahDesa = Role::firstOrCreate(
+            ['name' => 'pemerintah_desa'],
+            ['description' => 'Pemerintah Desa / Perangkat Desa untuk memantau ringkasan wilayah desa dan mengajukan blok']
         );
-        $ownerPermissions = collect($permissionModels)->filter(function ($item, $key) {
+        $desaPermissions = collect($permissionModels)->filter(function ($item, $key) {
             return in_array($key, [
                 'territory.view',
-                'trees.view',
-                'activities.view',
-                'harvest.view',
+                'blocks.request',
                 'reports.view',
             ], true);
         })->pluck('id');
-        $owner->permissions()->sync($ownerPermissions);
+        $pemerintahDesa->permissions()->sync($desaPermissions);
+
+        // Backward compatibility fallbacks
+        $manager = Role::firstOrCreate(
+            ['name' => 'plantation_manager'],
+            ['description' => 'Legacy: Pengelola Perkebunan (Dimigrasikan ke Petani)']
+        );
+        $manager->permissions()->sync($petaniPermissions);
+
+        $farmer = Role::firstOrCreate(['name' => 'farmer'], ['description' => 'Legacy: Petani Lapangan']);
+        $farmer->permissions()->sync($tenagaKerjaPermissions);
+
+        $owner = Role::firstOrCreate(['name' => 'owner'], ['description' => 'Legacy: Pemilik Kebun']);
+        $owner->permissions()->sync($petaniPermissions);
     }
 }

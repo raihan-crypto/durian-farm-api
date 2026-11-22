@@ -7,6 +7,8 @@ use App\Models\BlockFarmer;
 use App\Models\Farmer;
 use App\Models\Garden;
 use App\Models\GardenFarmer;
+use App\Models\GardenOwner;
+use App\Models\Owner;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 
@@ -20,7 +22,6 @@ class TerritoryScopeService
     private const UNRESTRICTED_ROLES = [
         'super_admin',
         'admin',
-        'plantation_manager',
     ];
 
     /**
@@ -46,11 +47,7 @@ class TerritoryScopeService
     protected array $memoizedVillageIds = [];
 
     /**
-     * Determine whether the user's territory visibility must be scoped to their farmer assignments.
-     *
-     * Users without an unrestricted role are always scoped (deny-by-default). Users that have
-     * no farmer profile (e.g. owner-only accounts, which cannot yet be linked to an owner record)
-     * therefore see no territory data until a proper link exists.
+     * Determine whether the user's territory visibility must be scoped to their role assignments.
      */
     public function isScoped(User $user): bool
     {
@@ -114,6 +111,27 @@ class TerritoryScopeService
     }
 
     /**
+     * Get the active garden IDs owned by an owner entity.
+     *
+     * @return array<int, string>
+     */
+    public function getActiveGardenIdsForOwner(Owner $owner): array
+    {
+        $today = Carbon::today()->toDateString();
+
+        return GardenOwner::query()
+            ->where('owner_id', $owner->id)
+            ->where(function ($query) use ($today) {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', $today);
+            })
+            ->pluck('garden_id')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
      * Get all garden IDs accessible by the user.
      * Returns null when the user is unrestricted.
      *
@@ -129,8 +147,33 @@ class TerritoryScopeService
             return $this->memoizedGardenIds[$user->id] = null;
         }
 
-        $farmer = $user->farmerProfile;
+        $user->loadMissing('roles');
+        $roleNames = $user->roles->pluck('name')->all();
 
+        // 1. Pemerintah Desa: all gardens in blocks belonging to their village
+        if (in_array('pemerintah_desa', $roleNames, true)) {
+            if (empty($user->village_id)) {
+                return $this->memoizedGardenIds[$user->id] = [];
+            }
+            $blockIds = Block::query()->where('village_id', $user->village_id)->pluck('id')->all();
+
+            return $this->memoizedGardenIds[$user->id] = empty($blockIds)
+                ? []
+                : Garden::query()->whereIn('block_id', $blockIds)->pluck('id')->all();
+        }
+
+        // 2. Petani (Pengelola Kebun): gardens they own
+        if (in_array('petani', $roleNames, true) || in_array('owner', $roleNames, true)) {
+            $owner = $user->ownerProfile ?? Owner::query()->where('user_id', $user->id)->first();
+            if (! $owner) {
+                return $this->memoizedGardenIds[$user->id] = [];
+            }
+
+            return $this->memoizedGardenIds[$user->id] = $this->getActiveGardenIdsForOwner($owner);
+        }
+
+        // 3. Tenaga Kerja Kebun (or legacy farmer): gardens directly assigned or via assigned blocks
+        $farmer = $user->farmerProfile;
         if (! $farmer) {
             return $this->memoizedGardenIds[$user->id] = [];
         }
@@ -162,8 +205,30 @@ class TerritoryScopeService
             return $this->memoizedBlockIds[$user->id] = null;
         }
 
-        $farmer = $user->farmerProfile;
+        $user->loadMissing('roles');
+        $roleNames = $user->roles->pluck('name')->all();
 
+        // 1. Pemerintah Desa: all blocks in their village
+        if (in_array('pemerintah_desa', $roleNames, true)) {
+            if (empty($user->village_id)) {
+                return $this->memoizedBlockIds[$user->id] = [];
+            }
+
+            return $this->memoizedBlockIds[$user->id] = Block::query()->where('village_id', $user->village_id)->pluck('id')->all();
+        }
+
+        // 2. Petani (Pengelola Kebun): parent blocks of their owned gardens
+        if (in_array('petani', $roleNames, true) || in_array('owner', $roleNames, true)) {
+            $gardenIds = $this->getAccessibleGardenIds($user) ?? [];
+            if (empty($gardenIds)) {
+                return $this->memoizedBlockIds[$user->id] = [];
+            }
+
+            return $this->memoizedBlockIds[$user->id] = Garden::query()->whereIn('id', $gardenIds)->pluck('block_id')->unique()->values()->all();
+        }
+
+        // 3. Tenaga Kerja Kebun: assigned blocks + parent blocks of assigned gardens
+        $farmer = $user->farmerProfile;
         if (! $farmer) {
             return $this->memoizedBlockIds[$user->id] = [];
         }
@@ -190,6 +255,18 @@ class TerritoryScopeService
             return $this->memoizedVillageIds[$user->id];
         }
 
+        if (! $this->isScoped($user)) {
+            return $this->memoizedVillageIds[$user->id] = null;
+        }
+
+        $user->loadMissing('roles');
+        $roleNames = $user->roles->pluck('name')->all();
+
+        // 1. Pemerintah Desa: their bound village
+        if (in_array('pemerintah_desa', $roleNames, true)) {
+            return $this->memoizedVillageIds[$user->id] = $user->village_id ? [$user->village_id] : [];
+        }
+
         $blockIds = $this->getAccessibleBlockIds($user);
 
         if ($blockIds === null) {
@@ -202,6 +279,7 @@ class TerritoryScopeService
 
         return $this->memoizedVillageIds[$user->id] = Block::query()
             ->whereIn('id', $blockIds)
+            ->whereNotNull('village_id')
             ->pluck('village_id')
             ->unique()
             ->values()

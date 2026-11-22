@@ -160,7 +160,7 @@ class FarmerOwnerManagementTest extends TestCase
             ->deleteJson("/api/v1/owners/{$owner3->id}")
             ->assertStatus(200);
 
-        $this->assertDatabaseMissing('owners', ['id' => $owner3->id]);
+        $this->assertSoftDeleted('owners', ['id' => $owner3->id]);
     }
 
     public function test_admin_can_crud_farmers_and_assign_to_blocks_and_gardens(): void
@@ -259,7 +259,7 @@ class FarmerOwnerManagementTest extends TestCase
             ->deleteJson("/api/v1/farmers/{$farmerId}")
             ->assertStatus(200);
 
-        $this->assertDatabaseMissing('farmers', ['id' => $farmerId]);
+        $this->assertSoftDeleted('farmers', ['id' => $farmerId]);
     }
 
     public function test_authenticated_farmer_can_fetch_my_assignments_with_summary(): void

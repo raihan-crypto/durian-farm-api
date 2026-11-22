@@ -117,7 +117,7 @@ class DurianVarietyManagementTest extends TestCase
             ->deleteJson("/api/v1/durian-varieties/{$unused->id}")
             ->assertStatus(200);
 
-        $this->assertDatabaseMissing('durian_varieties', ['id' => $unused->id]);
+        $this->assertSoftDeleted('durian_varieties', ['id' => $unused->id]);
     }
 
     public function test_admin_can_upload_and_delete_variety_photo(): void

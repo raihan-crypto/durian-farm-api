@@ -75,12 +75,29 @@ class BlockController extends Controller
      */
     public function store(BlockRequest $request): JsonResponse
     {
-        $block = Block::create($request->validated());
+        $user = $request->user();
+        $data = $request->validated();
+
+        if ($user && $user->hasRole('pemerintah_desa')) {
+            if (! empty($user->village_id) && $data['village_id'] !== $user->village_id) {
+                return $this->errorResponse('Anda hanya dapat mengajukan blok untuk wilayah desa Anda sendiri', 403);
+            }
+            $data['approval_status'] = 'pending_addition';
+            $data['requested_by'] = $user->id;
+        } else {
+            $data['approval_status'] = $data['approval_status'] ?? 'approved';
+        }
+
+        $block = Block::create($data);
         $block->load('village')->loadCount(['gardens', 'trees']);
+
+        $message = ($block->approval_status === 'pending_addition')
+            ? 'Permohonan penambahan blok berhasil diajukan dan menunggu persetujuan admin'
+            : 'Blok berhasil dibuat';
 
         return $this->successResponse(
             new BlockResource($block),
-            'Blok berhasil dibuat',
+            $message,
             201
         );
     }
@@ -146,7 +163,7 @@ class BlockController extends Controller
     /**
      * Remove the specified block if it has no gardens.
      */
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $block = Block::find($id);
 
@@ -158,9 +175,73 @@ class BlockController extends Controller
             return $this->errorResponse('Blok tidak dapat dihapus karena masih memiliki kebun terdaftar', 422);
         }
 
+        $user = $request->user();
+        if ($user && $user->hasRole('pemerintah_desa')) {
+            if ($user->village_id && $block->village_id !== $user->village_id) {
+                return $this->errorResponse('Anda hanya dapat mengajukan penghapusan blok untuk desa Anda sendiri', 403);
+            }
+            $block->update([
+                'approval_status' => 'pending_deletion',
+                'requested_by' => $user->id,
+            ]);
+
+            return $this->successResponse(
+                new BlockResource($block),
+                'Permohonan penghapusan blok berhasil diajukan dan menunggu persetujuan admin'
+            );
+        }
+
         $block->delete();
 
         return $this->successResponse(null, 'Blok berhasil dihapus');
+    }
+
+    /**
+     * Approve a block addition or deletion request.
+     */
+    public function approve(Request $request, string $id): JsonResponse
+    {
+        $block = Block::find($id);
+
+        if (! $block) {
+            return $this->errorResponse('Blok tidak ditemukan', 404);
+        }
+
+        if ($block->approval_status === 'pending_deletion') {
+            $block->delete();
+
+            return $this->successResponse(null, 'Permohonan penghapusan blok disetujui, blok telah dihapus');
+        }
+
+        $block->update([
+            'approval_status' => 'approved',
+        ]);
+
+        return $this->successResponse(new BlockResource($block), 'Permohonan penambahan blok disetujui');
+    }
+
+    /**
+     * Reject a block addition or deletion request.
+     */
+    public function reject(Request $request, string $id): JsonResponse
+    {
+        $block = Block::find($id);
+
+        if (! $block) {
+            return $this->errorResponse('Blok tidak ditemukan', 404);
+        }
+
+        if ($block->approval_status === 'pending_addition') {
+            $block->delete();
+
+            return $this->successResponse(null, 'Permohonan penambahan blok ditolak dan data dibatalkan');
+        }
+
+        $block->update([
+            'approval_status' => 'approved',
+        ]);
+
+        return $this->successResponse(new BlockResource($block), 'Permohonan penghapusan blok ditolak');
     }
 
     /**

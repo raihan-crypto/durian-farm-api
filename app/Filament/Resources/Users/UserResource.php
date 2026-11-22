@@ -5,7 +5,10 @@ namespace App\Filament\Resources\Users;
 use App\Filament\Resources\Users\Pages\ManageUsers;
 use App\Models\User;
 use BackedEnum;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -15,8 +18,11 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Hash;
 use UnitEnum;
 
@@ -51,7 +57,12 @@ class UserResource extends Resource
 
     public static function canDelete(Model $record): bool
     {
-        return false;
+        /** @var User $record */
+        if ($record->hasRole('super_admin')) {
+            return false;
+        }
+
+        return (bool) (auth()->user()?->hasRole('super_admin') || auth()->user()?->hasPermission('users.manage'));
     }
 
     public static function form(Schema $schema): Schema
@@ -68,6 +79,12 @@ class UserResource extends Resource
                 ->dehydrated(fn (?string $state) => filled($state))
                 ->required(fn (string $operation): bool => $operation === 'create'),
             Select::make('roles')->label('Role')->relationship('roles', 'name')->multiple()->preload(),
+            Select::make('village_id')
+                ->label('Desa Terikat')
+                ->relationship('village', 'name')
+                ->searchable()
+                ->preload()
+                ->helperText('Wajib diisi apabila pengguna memiliki role Pemerintah Desa'),
             Toggle::make('is_active')->label('Aktif')->default(true),
         ]);
     }
@@ -79,14 +96,27 @@ class UserResource extends Resource
                 TextColumn::make('name')->label('Nama')->searchable()->sortable(),
                 TextColumn::make('email')->label('Email')->searchable(),
                 TextColumn::make('roles.name')->label('Role')->badge(),
+                TextColumn::make('village.name')->label('Desa Terikat')->placeholder('-'),
                 TextColumn::make('organization.name')->label('Organisasi')->placeholder('-'),
                 IconColumn::make('is_active')->label('Aktif')->boolean(),
             ])
             ->filters([
                 TernaryFilter::make('is_active')->label('Status Aktif'),
+                TrashedFilter::make(),
             ])
             ->recordActions([
                 EditAction::make(),
+                DeleteAction::make()->visible(fn (User $record) => ! $record->hasRole('super_admin')),
+                RestoreAction::make()->visible(fn () => auth()->user()?->hasRole('super_admin')),
+                ForceDeleteAction::make()->visible(fn (User $record) => ! $record->hasRole('super_admin') && auth()->user()?->hasRole('super_admin')),
+            ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
             ]);
     }
 

@@ -42,6 +42,8 @@ class TreeRequest extends FormRequest
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'status' => ['sometimes', 'required', Rule::in(array_keys(Tree::STATUS_LABELS))],
             'notes' => ['nullable', 'string'],
+            'photo' => ['nullable', 'image', 'max:5120'],
+            'photo_path' => ['nullable', 'string', 'max:500'],
         ];
     }
 

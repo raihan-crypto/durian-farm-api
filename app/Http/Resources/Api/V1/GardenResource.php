@@ -18,6 +18,8 @@ class GardenResource extends JsonResource
             'id' => $this->id,
             'block_id' => $this->block_id,
             'name' => $this->name,
+            'garden_code' => $this->garden_code,
+            'status' => $this->status ?? 'active',
             'area_hectares' => $this->area_hectares !== null ? (float) $this->area_hectares : null,
             'address' => $this->address,
             'latitude' => $this->latitude !== null ? (float) $this->latitude : null,

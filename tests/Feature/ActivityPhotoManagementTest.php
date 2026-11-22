@@ -125,12 +125,12 @@ class ActivityPhotoManagementTest extends TestCase
             ->assertStatus(200)
             ->assertJsonPath('data.id', $photoId);
 
-        // Delete photo removes record and stored file
+        // Delete photo soft deletes record and removes stored file
         $this->withHeader('Authorization', 'Bearer '.$this->adminToken)
             ->deleteJson("/api/v1/activity-photos/{$photoId}")
             ->assertStatus(200);
 
-        $this->assertDatabaseMissing('activity_photos', ['id' => $photoId]);
+        $this->assertSoftDeleted('activity_photos', ['id' => $photoId]);
         Storage::disk('public')->assertMissing($photo->file_path);
     }
 

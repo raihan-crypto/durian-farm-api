@@ -17,6 +17,7 @@ class VillageResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'village_code' => $this->village_code,
             'district' => $this->district,
             'regency' => $this->regency,
             'province' => $this->province,

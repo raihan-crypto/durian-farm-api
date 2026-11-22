@@ -11,13 +11,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements FilamentUser
 {
-    use Auditable, HasApiTokens, HasFactory, HasUuids, Notifiable;
+    use Auditable, HasApiTokens, HasFactory, HasUuids, Notifiable, SoftDeletes;
 
     protected $table = 'users';
 
@@ -29,6 +30,7 @@ class User extends Authenticatable implements FilamentUser
 
     protected $fillable = [
         'organization_id',
+        'village_id',
         'name',
         'email',
         'password',
@@ -54,6 +56,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->belongsTo(Organization::class, 'organization_id');
     }
 
+    public function village(): BelongsTo
+    {
+        return $this->belongsTo(Village::class, 'village_id');
+    }
+
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'user_roles', 'user_id', 'role_id');
@@ -62,6 +69,11 @@ class User extends Authenticatable implements FilamentUser
     public function farmerProfile(): HasOne
     {
         return $this->hasOne(Farmer::class, 'user_id');
+    }
+
+    public function ownerProfile(): HasOne
+    {
+        return $this->hasOne(Owner::class, 'user_id');
     }
 
     public function auditLogs(): HasMany
@@ -129,8 +141,10 @@ class User extends Authenticatable implements FilamentUser
         return $this->roles->pluck('name')->intersect([
             'super_admin',
             'admin',
-            'plantation_manager',
-            'owner',
+            'petani',
+            'pemerintah_desa',
+            'owner', // Backwards-compatible fallback during migration
+            'plantation_manager', // Backwards-compatible fallback during migration
         ])->isNotEmpty();
     }
 }

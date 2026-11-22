@@ -122,6 +122,11 @@ class TreeController extends Controller
 
         $data['status'] = $data['status'] ?? 'active';
 
+        if ($request->hasFile('photo')) {
+            $path = $request->file('photo')->store('trees', 'public');
+            $data['photo_path'] = $path;
+        }
+
         $tree = DB::transaction(function () use ($data) {
             $tree = Tree::create($data);
             $this->qrCodeService->ensureForTree($tree);
@@ -182,6 +187,11 @@ class TreeController extends Controller
             ! $this->territoryScope->canAccessGarden($request->user(), $data['garden_id'])
         ) {
             return $this->errorResponse('Anda tidak memiliki akses untuk mengubah pohon pada kebun ini', 403);
+        }
+
+        if ($request->hasFile('photo')) {
+            $path = $request->file('photo')->store('trees', 'public');
+            $data['photo_path'] = $path;
         }
 
         $tree->update($data);

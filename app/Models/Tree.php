@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\TreeIdentityNumberService;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,10 +10,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Tree extends Model
 {
-    use Auditable, HasFactory, HasUuids;
+    use Auditable, HasFactory, HasUuids, SoftDeletes;
 
     protected $table = 'trees';
 
@@ -46,6 +48,7 @@ class Tree extends Model
         'garden_id',
         'variety_id',
         'tree_code',
+        'tree_identity_number',
         'tree_name',
         'planted_at',
         'planting_age_months',
@@ -56,7 +59,19 @@ class Tree extends Model
         'longitude',
         'status',
         'notes',
+        'photo_path',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Tree $tree) {
+            // Auto generate or recalculate NIK if missing or if garden/variety changed
+            if (empty($tree->tree_identity_number) || $tree->isDirty(['garden_id', 'variety_id'])) {
+                $service = app(TreeIdentityNumberService::class);
+                $tree->tree_identity_number = $service->generateForTree($tree);
+            }
+        });
+    }
 
     protected function casts(): array
     {

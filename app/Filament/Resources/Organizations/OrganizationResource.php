@@ -29,6 +29,8 @@ class OrganizationResource extends Resource
 
     protected static ?string $modelLabel = 'Organisasi';
 
+    protected static ?string $pluralModelLabel = 'Organisasi';
+
     protected static ?int $navigationSort = 1;
 
     public static function canViewAny(): bool

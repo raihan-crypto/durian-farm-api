@@ -37,6 +37,7 @@ class Farmer extends Model
     public function gardens(): BelongsToMany
     {
         return $this->belongsToMany(Garden::class, 'garden_farmers', 'farmer_id', 'garden_id')
+            ->using(GardenFarmer::class)
             ->withPivot(['id', 'assignment_date', 'end_date'])
             ->withTimestamps();
     }

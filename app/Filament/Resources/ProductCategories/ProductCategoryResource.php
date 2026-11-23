@@ -31,6 +31,8 @@ class ProductCategoryResource extends Resource
 
     protected static ?string $modelLabel = 'Kategori Produk';
 
+    protected static ?string $pluralModelLabel = 'Kategori Produk';
+
     protected static ?int $navigationSort = 1;
 
     public static function canViewAny(): bool

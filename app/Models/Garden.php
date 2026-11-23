@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\TerritoryCodeService;
+use App\Services\TerritoryDuplicateGuard;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,6 +29,7 @@ class Garden extends Model
     protected $fillable = [
         'block_id',
         'name',
+        'ownership_type',
         'garden_code',
         'area_hectares',
         'address',
@@ -47,13 +50,20 @@ class Garden extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (Garden $garden) {
+        static::saving(function (Garden $garden) {
+            app(TerritoryDuplicateGuard::class)->assertGardenIsUnique($garden);
+
             if (empty($garden->garden_code) && $garden->block_id) {
-                $count = static::withTrashed()->where('block_id', $garden->block_id)->count();
-                $garden->garden_code = sprintf('%02d', $count + 1);
+                $garden->garden_code = app(TerritoryCodeService::class)->gardenCodeFor($garden);
             }
             if (empty($garden->status)) {
                 $garden->status = 'active';
+            }
+        });
+
+        static::saved(function (Garden $garden) {
+            if ($garden->wasChanged('garden_code')) {
+                app(TerritoryCodeService::class)->refreshTreesOfGarden($garden->id);
             }
         });
     }
@@ -66,6 +76,7 @@ class Garden extends Model
     public function owners(): BelongsToMany
     {
         return $this->belongsToMany(Owner::class, 'garden_owners', 'garden_id', 'owner_id')
+            ->using(GardenOwner::class)
             ->withPivot(['id', 'ownership_percentage', 'start_date', 'end_date'])
             ->withTimestamps();
     }
@@ -78,6 +89,7 @@ class Garden extends Model
     public function farmers(): BelongsToMany
     {
         return $this->belongsToMany(Farmer::class, 'garden_farmers', 'garden_id', 'farmer_id')
+            ->using(GardenFarmer::class)
             ->withPivot(['id', 'assignment_date', 'end_date'])
             ->withTimestamps();
     }

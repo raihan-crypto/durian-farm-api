@@ -30,6 +30,8 @@ class FloweringRecordResource extends Resource
 
     protected static ?string $modelLabel = 'Pembungaan';
 
+    protected static ?string $pluralModelLabel = 'Pembungaan';
+
     protected static ?int $navigationSort = 5;
 
     public static function canViewAny(): bool

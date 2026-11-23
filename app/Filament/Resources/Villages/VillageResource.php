@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Villages;
 
 use App\Filament\Resources\Villages\Pages\ManageVillages;
 use App\Models\Village;
+use App\Services\TerritoryDuplicateGuard;
 use App\Support\BanyumasRegionData;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -13,7 +14,6 @@ use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -37,6 +37,8 @@ class VillageResource extends Resource
     protected static ?string $navigationLabel = 'Desa';
 
     protected static ?string $modelLabel = 'Desa';
+
+    protected static ?string $pluralModelLabel = 'Desa';
 
     protected static ?int $navigationSort = 1;
 
@@ -93,21 +95,17 @@ class VillageResource extends Resource
                 ->searchable()
                 ->required()
                 ->live()
-                ->afterStateUpdated(function (?string $state, $get, $set) {
-                    $district = $get('district');
-                    if ($state && $district) {
-                        $code = BanyumasRegionData::findVillageCode($state, $district);
-                        if ($code) {
-                            $set('village_code', $code);
+                ->rules([
+                    fn ($get, ?Village $record) => function (string $attribute, $value, \Closure $fail) use ($get, $record) {
+                        $district = $get('district') ?? $record?->district;
+                        $guard = app(TerritoryDuplicateGuard::class);
+                        $dup = $guard->findDuplicateVillage($value, $district, $record?->id);
+                        if ($dup) {
+                            $fail($guard->message('Desa', 'kecamatan', $dup));
                         }
-                    }
-                }),
-
-            TextInput::make('village_code')
-                ->label('Kode Desa (2 Digit)')
-                ->readOnly()
-                ->maxLength(10)
-                ->helperText('Kode 2 digit otomatis berdasarkan urutan desa di kecamatan'),
+                    },
+                ])
+                ->helperText('Pilih desa dari daftar resmi Kabupaten Banyumas. Kode desa akan dibuat otomatis.'),
         ]);
     }
 

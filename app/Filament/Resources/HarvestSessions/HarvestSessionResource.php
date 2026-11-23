@@ -32,6 +32,8 @@ class HarvestSessionResource extends Resource
 
     protected static ?string $modelLabel = 'Sesi Panen';
 
+    protected static ?string $pluralModelLabel = 'Sesi Panen';
+
     protected static ?int $navigationSort = 2;
 
     public static function canViewAny(): bool

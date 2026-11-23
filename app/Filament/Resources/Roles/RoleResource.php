@@ -29,6 +29,8 @@ class RoleResource extends Resource
 
     protected static ?string $modelLabel = 'Role';
 
+    protected static ?string $pluralModelLabel = 'Role';
+
     protected static ?int $navigationSort = 3;
 
     public static function canViewAny(): bool

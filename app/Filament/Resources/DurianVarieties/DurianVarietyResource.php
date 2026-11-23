@@ -32,6 +32,8 @@ class DurianVarietyResource extends Resource
 
     protected static ?string $modelLabel = 'Varietas Durian';
 
+    protected static ?string $pluralModelLabel = 'Varietas Durian';
+
     protected static ?int $navigationSort = 1;
 
     public static function canViewAny(): bool

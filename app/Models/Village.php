@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-use App\Support\BanyumasRegionData;
+use App\Services\TerritoryCodeService;
+use App\Services\TerritoryDuplicateGuard;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,15 +34,17 @@ class Village extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (Village $village) {
-            if (empty($village->village_code)) {
-                $code = BanyumasRegionData::findVillageCode($village->name, $village->district);
-                if ($code) {
-                    $village->village_code = $code;
-                } else {
-                    $count = static::withTrashed()->where('district', $village->district)->count();
-                    $village->village_code = sprintf('%02d', $count + 1);
-                }
+        static::saving(function (Village $village) {
+            app(TerritoryDuplicateGuard::class)->assertVillageIsUnique($village);
+
+            if (empty($village->village_code) || $village->isDirty(['name', 'district'])) {
+                $village->village_code = app(TerritoryCodeService::class)->villageCodeFor($village);
+            }
+        });
+
+        static::saved(function (Village $village) {
+            if ($village->wasChanged('village_code')) {
+                app(TerritoryCodeService::class)->cascadeVillage($village);
             }
         });
     }

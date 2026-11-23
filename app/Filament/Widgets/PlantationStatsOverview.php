@@ -51,8 +51,8 @@ class PlantationStatsOverview extends StatsOverviewWidget
                 ->description("{$metrics['active_trees']} pohon aktif • {$metrics['active_varieties_count']} varietas aktif")
                 ->color('success'),
 
-            Stat::make('Pemilik & Petani', "{$metrics['owners_count']} Pemilik / {$metrics['farmers_count']} Petani")
-                ->description('Pengelola & pekerja lapangan terdaftar')
+            Stat::make('Petani & Tenaga Kerja', "{$metrics['owners_count']} Petani / {$metrics['farmers_count']} Tenaga Kerja")
+                ->description('Pengelola kebun & pekerja lapangan terdaftar')
                 ->color('info'),
 
             Stat::make('Total Hasil Panen', number_format($metrics['total_harvest_weight'], 2).' kg')

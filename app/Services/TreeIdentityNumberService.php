@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\DurianVariety;
 use App\Models\Garden;
 use App\Models\Tree;
-use App\Support\BanyumasRegionData;
 
 class TreeIdentityNumberService
 {
@@ -26,25 +25,25 @@ class TreeIdentityNumberService
         $block = $garden?->block;
         $village = $block?->village;
 
-        // 1. Village Code (2 digits)
-        $villageCodeRaw = $village?->village_code;
-        if (empty($villageCodeRaw) && $village !== null) {
-            $villageCodeRaw = BanyumasRegionData::findVillageCode($village->name, $village->district);
+        // 1. Block Code (e.g. 06.05.01)
+        $blockCode = $block?->block_code;
+        if (empty($blockCode) && $block !== null) {
+            $blockCode = app(TerritoryCodeService::class)->blockCodeFor($block);
         }
-        $villageDigits = preg_replace('/\D/', '', (string) $villageCodeRaw);
-        $villageCode = sprintf('%02d', ! empty($villageDigits) ? (int) $villageDigits : 1);
+        if (empty($blockCode)) {
+            $villageCode = $village?->village_code ?: '00.00';
+            $blockCode = $villageCode.'.01';
+        }
 
-        // 2. Block Code (2 digits)
-        $blockCodeRaw = $block?->block_code;
-        $blockDigits = preg_replace('/\D/', '', (string) $blockCodeRaw);
-        $blockCode = sprintf('%02d', ! empty($blockDigits) ? (int) $blockDigits : 1);
-
-        // 3. Garden Code (2 digits)
+        // 2. Garden Code (2 digits, e.g. 02)
         $gardenCodeRaw = $garden?->garden_code;
+        if (empty($gardenCodeRaw) && $garden !== null) {
+            $gardenCodeRaw = app(TerritoryCodeService::class)->gardenCodeFor($garden);
+        }
         $gardenDigits = preg_replace('/\D/', '', (string) $gardenCodeRaw);
         $gardenCode = sprintf('%02d', ! empty($gardenDigits) ? (int) $gardenDigits : 1);
 
-        // 4. Variety Code
+        // 3. Variety Code
         $varietyCode = 'DUR';
         if ($variety !== null) {
             $codeCandidate = strtoupper(trim((string) ($variety->code ?: $variety->name)));
@@ -54,7 +53,7 @@ class TreeIdentityNumberService
             }
         }
 
-        $prefix = sprintf('%s-%s-%s-%s-', $villageCode, $blockCode, $gardenCode, $varietyCode);
+        $prefix = sprintf('%s.%s-%s-', $blockCode, $gardenCode, $varietyCode);
 
         // 5. Sequence Number (4 digits)
         $existingCount = Tree::withTrashed()

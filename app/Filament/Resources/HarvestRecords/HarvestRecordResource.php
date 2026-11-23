@@ -30,6 +30,8 @@ class HarvestRecordResource extends Resource
 
     protected static ?string $modelLabel = 'Hasil Panen';
 
+    protected static ?string $pluralModelLabel = 'Hasil Panen';
+
     protected static ?int $navigationSort = 3;
 
     public static function canViewAny(): bool

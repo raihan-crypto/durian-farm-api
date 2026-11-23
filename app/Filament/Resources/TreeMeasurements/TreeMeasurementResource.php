@@ -30,6 +30,8 @@ class TreeMeasurementResource extends Resource
 
     protected static ?string $modelLabel = 'Pengukuran Pohon';
 
+    protected static ?string $pluralModelLabel = 'Pengukuran Pohon';
+
     protected static ?int $navigationSort = 3;
 
     public static function canViewAny(): bool

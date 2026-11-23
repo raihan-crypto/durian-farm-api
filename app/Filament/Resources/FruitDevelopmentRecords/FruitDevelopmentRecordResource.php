@@ -30,6 +30,8 @@ class FruitDevelopmentRecordResource extends Resource
 
     protected static ?string $modelLabel = 'Perkembangan Buah';
 
+    protected static ?string $pluralModelLabel = 'Perkembangan Buah';
+
     protected static ?int $navigationSort = 6;
 
     public static function canViewAny(): bool

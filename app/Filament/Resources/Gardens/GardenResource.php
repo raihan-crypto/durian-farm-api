@@ -4,8 +4,10 @@ namespace App\Filament\Resources\Gardens;
 
 use App\Filament\Resources\Gardens\Pages\ManageGardens;
 use App\Models\Block;
+use App\Models\Farmer;
 use App\Models\Garden;
 use App\Models\Village;
+use App\Services\TerritoryDuplicateGuard;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -41,6 +43,8 @@ class GardenResource extends Resource
 
     protected static ?string $modelLabel = 'Kebun';
 
+    protected static ?string $pluralModelLabel = 'Kebun';
+
     protected static ?int $navigationSort = 3;
 
     public static function canViewAny(): bool
@@ -55,7 +59,23 @@ class GardenResource extends Resource
 
     public static function canEdit(Model $record): bool
     {
-        return (bool) auth()->user()?->hasPermission('territory.manage');
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+            return true;
+        }
+
+        if ($user->hasRole('petani')) {
+            $ownerId = $user->ownerProfile?->id;
+            if ($ownerId && $record instanceof Garden) {
+                return $record->owners()->where('owners.id', $ownerId)->exists();
+            }
+        }
+
+        return (bool) $user->hasPermission('territory.manage');
     }
 
     public static function canDelete(Model $record): bool
@@ -94,8 +114,56 @@ class GardenResource extends Resource
                 ->preload()
                 ->required(),
 
-            TextInput::make('name')->label('Nama Kebun')->required()->maxLength(150),
-            TextInput::make('garden_code')->label('Kode Kebun (2 Digit)')->maxLength(20)->helperText('Otomatis dibuat jika kosong'),
+            TextInput::make('name')
+                ->label('Nama Kebun')
+                ->required()
+                ->maxLength(150)
+                ->rules([
+                    fn ($get, ?Garden $record) => function (string $attribute, $value, \Closure $fail) use ($get, $record) {
+                        $blockId = $get('block_id') ?? $record?->block_id;
+                        $guard = app(TerritoryDuplicateGuard::class);
+                        $dup = $guard->findDuplicateGarden($value, $blockId, $record?->id);
+                        if ($dup) {
+                            $fail($guard->message('Kebun', 'blok', $dup));
+                        }
+                    },
+                ]),
+
+            Select::make('ownership_type')
+                ->label('Tipe Kepemilikan Kebun')
+                ->options([
+                    'individual' => 'Perorangan (1 Petani)',
+                    'group' => 'Kelompok / Kelompok Tani (Beberapa Petani)',
+                ])
+                ->default('individual')
+                ->required()
+                ->live(),
+
+            Select::make('owners')
+                ->label('Petani Pengelola Kebun')
+                ->relationship('owners', 'name')
+                ->multiple()
+                ->maxItems(fn ($get) => $get('ownership_type') === 'individual' ? 1 : null)
+                ->searchable()
+                ->preload()
+                ->required()
+                ->helperText(fn ($get) => $get('ownership_type') === 'individual'
+                    ? 'Pilih 1 orang petani pemilik/pengelola kebun perorangan ini'
+                    : 'Pilih satu atau lebih petani yang tergabung dalam kelompok pengelola kebun ini'),
+
+            Select::make('farmers')
+                ->label('Tenaga Kerja Kebun')
+                ->relationship('farmers', 'name')
+                ->multiple()
+                ->searchable()
+                ->preload()
+                ->helperText('Daftar tenaga kerja operasional yang ditugaskan di kebun ini'),
+
+            TextInput::make('garden_code')
+                ->label('Kode Kebun (2 Digit)')
+                ->readOnly()
+                ->placeholder('Otomatis dibuat sistem (contoh: 01, 02)')
+                ->helperText('Kode 2 digit otomatis berdasarkan urutan kebun di dalam blok'),
 
             Select::make('status')
                 ->label('Status Kebun')
@@ -123,6 +191,8 @@ class GardenResource extends Resource
                 TextColumn::make('name')->label('Kebun')->searchable()->sortable(),
                 TextColumn::make('block.name')->label('Blok')->sortable(),
                 TextColumn::make('block.village.name')->label('Desa')->sortable(),
+                TextColumn::make('owners.name')->label('Petani Pengelola')->badge()->color('info')->placeholder('Belum ditentukan'),
+                TextColumn::make('farmers_count')->label('Tenaga Kerja')->counts('farmers')->sortable(),
                 TextColumn::make('status')
                     ->label('Status')
                     ->badge()
@@ -145,6 +215,48 @@ class GardenResource extends Resource
                     ->modalHeading(fn (Garden $record) => "Detail Kebun: {$record->name}")
                     ->modalContent(fn (Garden $record) => view('filament.modals.garden-detail', ['record' => $record]))
                     ->modalSubmitAction(false),
+                Action::make('manage_workers')
+                    ->label('Kelola Tenaga Kerja')
+                    ->icon(Heroicon::OutlinedUsers)
+                    ->color('info')
+                    ->visible(function (Garden $record) {
+                        if ($record->trashed()) {
+                            return false;
+                        }
+
+                        $user = auth()->user();
+                        if (! $user) {
+                            return false;
+                        }
+                        if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+                            return true;
+                        }
+                        if ($user->hasRole('petani')) {
+                            $ownerId = $user->ownerProfile?->id;
+
+                            return $ownerId && $record->owners()->where('owners.id', $ownerId)->exists();
+                        }
+
+                        return false;
+                    })
+                    ->fillForm(fn (Garden $record): array => [
+                        'farmer_ids' => $record->farmers()->pluck('farmers.id')->all(),
+                    ])
+                    ->form([
+                        Select::make('farmer_ids')
+                            ->label('Daftar Tenaga Kerja Kebun')
+                            ->options(fn () => Farmer::query()->orderBy('name')->pluck('name', 'id'))
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->helperText('Tambahkan atau kurangi tenaga kerja operasional yang ditugaskan di kebun ini'),
+                    ])
+                    ->action(function (Garden $record, array $data): void {
+                        $record->farmers()->sync($data['farmer_ids'] ?? []);
+                    })
+                    ->modalHeading(fn (Garden $record) => "Kelola Tenaga Kerja: {$record->name}")
+                    ->modalSubmitActionLabel('Simpan Tenaga Kerja')
+                    ->successNotificationTitle('Tenaga kerja kebun berhasil diperbarui'),
                 EditAction::make(),
                 DeleteAction::make(),
                 RestoreAction::make()

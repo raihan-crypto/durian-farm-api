@@ -7,6 +7,7 @@ use App\Models\Farmer;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -26,9 +27,11 @@ class FarmerResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Wilayah & Kepemilikan';
 
-    protected static ?string $navigationLabel = 'Petani';
+    protected static ?string $navigationLabel = 'Tenaga Kerja';
 
-    protected static ?string $modelLabel = 'Petani';
+    protected static ?string $modelLabel = 'Tenaga Kerja';
+
+    protected static ?string $pluralModelLabel = 'Tenaga Kerja';
 
     protected static ?int $navigationSort = 5;
 
@@ -55,8 +58,14 @@ class FarmerResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Select::make('user_id')->label('Akun Pengguna')->relationship('user', 'email')->searchable()->preload()->nullable(),
-            TextInput::make('name')->label('Nama Petani')->required()->maxLength(150),
+            Select::make('user_id')
+                ->label('Akun Pengguna Terkait')
+                ->relationship('user', 'email')
+                ->searchable()
+                ->preload()
+                ->nullable()
+                ->helperText('Tautkan dengan akun mobile / login pekerja jika ada'),
+            TextInput::make('name')->label('Nama Tenaga Kerja')->required()->maxLength(150),
             TextInput::make('phone')->label('Telepon')->tel()->maxLength(30),
             Textarea::make('address')->label('Alamat')->columnSpanFull(),
         ]);
@@ -65,14 +74,20 @@ class FarmerResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->recordAction(ViewAction::class)
             ->columns([
                 TextColumn::make('name')->label('Nama')->searchable()->sortable(),
                 TextColumn::make('user.email')->label('Akun Email')->placeholder('Belum terhubung'),
                 TextColumn::make('phone')->label('Telepon')->placeholder('-'),
-                TextColumn::make('block_farmers_count')->label('Blok')->counts('blockFarmers'),
-                TextColumn::make('garden_farmers_count')->label('Kebun')->counts('gardenFarmers'),
+                TextColumn::make('gardens_count')->label('Kebun Tugas')->counts('gardens')->sortable(),
+                TextColumn::make('blocks_count')->label('Blok Tugas')->counts('blocks')->sortable(),
             ])
             ->recordActions([
+                ViewAction::make()
+                    ->label('Lihat Selengkapnya')
+                    ->modalHeading(fn (Farmer $record) => "Detail Tenaga Kerja: {$record->name}")
+                    ->modalContent(fn (Farmer $record) => view('filament.modals.farmer-detail', ['record' => $record]))
+                    ->modalSubmitAction(false),
                 EditAction::make(),
                 DeleteAction::make(),
             ]);

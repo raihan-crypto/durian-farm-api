@@ -212,9 +212,9 @@ class RoleRedesignAndNewFeaturesTest extends TestCase
         $villages = BanyumasRegionData::getVillagesForDistrict('Kemranjen');
         $this->assertNotEmpty($villages);
 
-        // Village code is automatically set (2 digits)
+        // Village code is automatically set in format [KodeKecamatan].[UrutDesa], e.g. 06.05
         $this->assertNotNull($this->villageBanyumas->village_code);
-        $this->assertSame(2, strlen($this->villageBanyumas->village_code));
+        $this->assertMatchesRegularExpression('/^\d{2}\.\d{2}$/', $this->villageBanyumas->village_code);
     }
 
     /**
@@ -222,9 +222,10 @@ class RoleRedesignAndNewFeaturesTest extends TestCase
      */
     public function test_block_and_garden_code_auto_generation(): void
     {
-        // Block code auto-generated as 2 digits
+        // Block code auto-generated in format [KodeDesa].[UrutBlok], e.g. 06.05.01
         $this->assertNotNull($this->block1->block_code);
-        $this->assertSame(2, strlen($this->block1->block_code));
+        $this->assertMatchesRegularExpression('/^\d{2}\.\d{2}\.\d{2}$/', $this->block1->block_code);
+        $this->assertStringStartsWith($this->villageBanyumas->village_code.'.', $this->block1->block_code);
 
         // Garden code auto-generated as 2 digits
         $this->assertNotNull($this->garden1->garden_code);
@@ -305,15 +306,14 @@ class RoleRedesignAndNewFeaturesTest extends TestCase
         $nikOriginal = $tree->tree_identity_number;
         $this->assertNotEmpty($nikOriginal);
 
-        // NIK format: [KodeDesa 2-digit]-[KodeBlok 2-digit]-[KodeKebun 2-digit]-[KodeVarietas]-[Urut 4-digit]
-        // E.g. 01-01-01-BWR-0001
+        // NIK format: [KodeBlok].[KodeKebun]-[KodeVarietas]-[Urut 4-digit]
+        // E.g. 06.05.01.01-BWR-0001
         $parts = explode('-', $nikOriginal);
-        $this->assertCount(5, $parts);
-        $this->assertSame($this->villageBanyumas->village_code, $parts[0]);
-        $this->assertSame($this->block1->block_code, $parts[1]);
-        $this->assertSame($this->garden1->garden_code, $parts[2]);
-        $this->assertSame('BWR', $parts[3]);
-        $this->assertSame('0001', $parts[4]);
+        $this->assertCount(3, $parts);
+        $expectedLocationPrefix = sprintf('%s.%s', $this->block1->block_code, $this->garden1->garden_code);
+        $this->assertSame($expectedLocationPrefix, $parts[0]);
+        $this->assertSame('BWR', $parts[1]);
+        $this->assertSame('0001', $parts[2]);
 
         // Change tree variety to Musang King (MK) -> NIK dynamically updates!
         $tree->update([

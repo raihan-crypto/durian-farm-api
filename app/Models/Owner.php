@@ -38,6 +38,7 @@ class Owner extends Model
     public function gardens(): BelongsToMany
     {
         return $this->belongsToMany(Garden::class, 'garden_owners', 'owner_id', 'garden_id')
+            ->using(GardenOwner::class)
             ->withPivot(['id', 'ownership_percentage', 'start_date', 'end_date'])
             ->withTimestamps();
     }

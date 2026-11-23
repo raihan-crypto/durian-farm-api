@@ -33,6 +33,8 @@ class AgriculturalProductResource extends Resource
 
     protected static ?string $modelLabel = 'Produk Pertanian';
 
+    protected static ?string $pluralModelLabel = 'Produk Pertanian';
+
     protected static ?int $navigationSort = 2;
 
     public static function canViewAny(): bool

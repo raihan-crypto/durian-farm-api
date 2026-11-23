@@ -29,6 +29,8 @@ class FertilizationRecordResource extends Resource
 
     protected static ?string $modelLabel = 'Pemupukan';
 
+    protected static ?string $pluralModelLabel = 'Pemupukan';
+
     protected static ?int $navigationSort = 3;
 
     public static function canViewAny(): bool

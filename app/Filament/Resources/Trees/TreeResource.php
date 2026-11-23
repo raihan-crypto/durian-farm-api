@@ -42,6 +42,8 @@ class TreeResource extends Resource
 
     protected static ?string $modelLabel = 'Pohon Durian';
 
+    protected static ?string $pluralModelLabel = 'Pohon Durian';
+
     protected static ?int $navigationSort = 2;
 
     public static function canViewAny(): bool

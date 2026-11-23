@@ -9,6 +9,46 @@ class BanyumasRegionData
     public const REGENCY = 'Kabupaten Banyumas';
 
     /**
+     * Official 2-digit district (kecamatan) codes of Kabupaten Banyumas (Kemendagri 33.02.xx).
+     *
+     * @var array<string, string>
+     */
+    public const DISTRICT_CODES = [
+        'Lumbir' => '01',
+        'Wangon' => '02',
+        'Jatilawang' => '03',
+        'Rawalo' => '04',
+        'Kebasen' => '05',
+        'Kemranjen' => '06',
+        'Sumpiuh' => '07',
+        'Tambak' => '08',
+        'Somagede' => '09',
+        'Kalibagor' => '10',
+        'Banyumas' => '11',
+        'Patikraja' => '12',
+        'Purwojati' => '13',
+        'Ajibarang' => '14',
+        'Gumelar' => '15',
+        'Pekuncen' => '16',
+        'Cilongok' => '17',
+        'Karanglewas' => '18',
+        'Sokaraja' => '19',
+        'Kembaran' => '20',
+        'Sumbang' => '21',
+        'Baturraden' => '22',
+        'Kedungbanteng' => '23',
+        'Purwokerto Selatan' => '24',
+        'Purwokerto Barat' => '25',
+        'Purwokerto Timur' => '26',
+        'Purwokerto Utara' => '27',
+    ];
+
+    /**
+     * Fallback district code for districts outside the Banyumas reference data.
+     */
+    public const UNKNOWN_DISTRICT_CODE = '00';
+
+    /**
      * Map of 27 Districts (Kecamatan) in Kabupaten Banyumas and their Villages (Desa/Kelurahan).
      *
      * @var array<string, array<int, array{code: string, name: string}>>
@@ -446,10 +486,28 @@ class BanyumasRegionData
 
         $options = [];
         foreach (self::DISTRICTS[$district] as $village) {
-            $options[$village['name']] = "{$village['code']} - {$village['name']}";
+            $options[$village['name']] = $village['name'];
         }
 
         return $options;
+    }
+
+    /**
+     * Get the official 2-digit code of a district (kecamatan), case-insensitive.
+     */
+    public static function getDistrictCode(?string $district): ?string
+    {
+        if (! $district) {
+            return null;
+        }
+
+        foreach (self::DISTRICT_CODES as $name => $code) {
+            if (strcasecmp($name, trim($district)) === 0) {
+                return $code;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -474,6 +532,7 @@ class BanyumasRegionData
                     }
                 }
             }
+
             return null;
         }
 

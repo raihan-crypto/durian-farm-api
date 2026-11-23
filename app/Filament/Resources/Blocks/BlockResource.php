@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Blocks;
 
 use App\Filament\Resources\Blocks\Pages\ManageBlocks;
 use App\Models\Block;
+use App\Services\TerritoryDuplicateGuard;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -39,6 +40,8 @@ class BlockResource extends Resource
 
     protected static ?string $modelLabel = 'Blok';
 
+    protected static ?string $pluralModelLabel = 'Blok';
+
     protected static ?int $navigationSort = 2;
 
     public static function canViewAny(): bool
@@ -64,9 +67,34 @@ class BlockResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Select::make('village_id')->label('Desa')->relationship('village', 'name')->searchable()->preload()->required(),
-            TextInput::make('name')->label('Nama Blok')->required()->maxLength(100),
-            TextInput::make('block_code')->label('Kode Blok (2 Digit)')->maxLength(10)->helperText('Otomatis dibuat jika kosong'),
+            Select::make('village_id')
+                ->label('Desa')
+                ->relationship('village', 'name')
+                ->searchable()
+                ->preload()
+                ->required(),
+
+            TextInput::make('name')
+                ->label('Nama Blok')
+                ->required()
+                ->maxLength(100)
+                ->rules([
+                    fn ($get, ?Block $record) => function (string $attribute, $value, \Closure $fail) use ($get, $record) {
+                        $villageId = $get('village_id') ?? $record?->village_id;
+                        $guard = app(TerritoryDuplicateGuard::class);
+                        $dup = $guard->findDuplicateBlock($value, $villageId, $record?->id);
+                        if ($dup) {
+                            $fail($guard->message('Blok', 'desa', $dup));
+                        }
+                    },
+                ]),
+
+            TextInput::make('block_code')
+                ->label('Kode Blok')
+                ->readOnly()
+                ->placeholder('Otomatis dibuat sistem (contoh: 06.05.01)')
+                ->helperText('Otomatis dibuat: [Kode Desa].[Urutan Blok di Desa], contoh: 06.05.01'),
+
             TextInput::make('area_hectares')->label('Luas (Ha)')->numeric()->minValue(0),
             Textarea::make('description')->label('Deskripsi')->columnSpanFull(),
         ]);

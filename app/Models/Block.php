@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\TerritoryCodeService;
+use App\Services\TerritoryDuplicateGuard;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -43,13 +45,26 @@ class Block extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (Block $block) {
+        static::saving(function (Block $block) {
+            app(TerritoryDuplicateGuard::class)->assertBlockIsUnique($block);
+
             if (empty($block->block_code) && $block->village_id) {
-                $count = static::withTrashed()->where('village_id', $block->village_id)->count();
-                $block->block_code = sprintf('%02d', $count + 1);
+                $block->block_code = app(TerritoryCodeService::class)->blockCodeFor($block);
+            } elseif ($block->isDirty('village_id') && $block->village_id) {
+                $village = Village::withTrashed()->find($block->village_id);
+                if ($village && $village->village_code) {
+                    $block->block_code = app(TerritoryCodeService::class)->rePrefixBlockCode($block, $village->village_code);
+                }
             }
+
             if (empty($block->approval_status)) {
                 $block->approval_status = 'approved';
+            }
+        });
+
+        static::saved(function (Block $block) {
+            if ($block->wasChanged('block_code')) {
+                app(TerritoryCodeService::class)->refreshTreesOfBlock($block);
             }
         });
     }

@@ -30,6 +30,8 @@ class SprayingRecordResource extends Resource
 
     protected static ?string $modelLabel = 'Penyemprotan';
 
+    protected static ?string $pluralModelLabel = 'Penyemprotan';
+
     protected static ?int $navigationSort = 4;
 
     public static function canViewAny(): bool

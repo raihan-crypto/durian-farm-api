@@ -25,6 +25,8 @@ class SyncLogResource extends Resource
 
     protected static ?string $modelLabel = 'Log Sinkronisasi';
 
+    protected static ?string $pluralModelLabel = 'Log Sinkronisasi';
+
     protected static ?int $navigationSort = 5;
 
     public static function canViewAny(): bool

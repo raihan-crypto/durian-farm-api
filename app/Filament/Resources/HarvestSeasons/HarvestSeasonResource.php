@@ -32,6 +32,8 @@ class HarvestSeasonResource extends Resource
 
     protected static ?string $modelLabel = 'Musim Panen';
 
+    protected static ?string $pluralModelLabel = 'Musim Panen';
+
     protected static ?int $navigationSort = 1;
 
     public static function canViewAny(): bool

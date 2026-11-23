@@ -145,8 +145,10 @@ class TreeResource extends Resource
                 ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),
-                RestoreAction::make(),
-                ForceDeleteAction::make()->visible(fn () => auth()->user()?->hasRole('super_admin')),
+                RestoreAction::make()
+                    ->visible(fn (Model $record) => $record->trashed() && (bool) auth()->user()?->hasRole('super_admin')),
+                ForceDeleteAction::make()
+                    ->visible(fn (Model $record) => $record->trashed() && (bool) auth()->user()?->hasRole('super_admin')),
             ]);
     }
 

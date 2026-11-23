@@ -8,7 +8,6 @@ use App\Models\Block;
 use App\Models\DurianVariety;
 use App\Models\Farmer;
 use App\Models\Garden;
-use App\Models\HarvestRecord;
 use App\Models\Owner;
 use App\Models\ProductCategory;
 use App\Models\Tree;
@@ -113,6 +112,7 @@ class TrashBin extends Page
     {
         if (! auth()->user()?->hasRole('super_admin')) {
             Notification::make()->title('Akses ditolak')->danger()->send();
+
             return;
         }
 
@@ -130,13 +130,22 @@ class TrashBin extends Page
     {
         if (! auth()->user()?->hasRole('super_admin')) {
             Notification::make()->title('Akses ditolak')->danger()->send();
+
             return;
         }
 
-        $record = $modelClass::onlyTrashed()->find($id);
-        if ($record) {
-            $record->forceDelete();
-            Notification::make()->title("Data telah dihapus permanen")->warning()->send();
+        try {
+            $record = $modelClass::onlyTrashed()->find($id);
+            if ($record) {
+                $record->forceDelete();
+                Notification::make()->title('Data telah dihapus permanen')->warning()->send();
+            }
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Gagal Hapus Permanen')
+                ->body('Data tidak dapat dihapus permanen karena masih memiliki relasi data lain yang terikat.')
+                ->danger()
+                ->send();
         }
     }
 

@@ -178,10 +178,13 @@ class RoleAccountsSeeder extends Seeder
             ['unit' => 'gram', 'description' => 'Fungisida kontak berspektrum luas pengendali busuk akar dan jamur daun', 'is_active' => true]
         );
 
-        // 6. Akun Pengguna Tiap-tiap Role (SRS Bab 8)
+        // 6. Akun Pengguna Tiap-tiap Role (SRS Bab 8 & Role Redesign)
         $roles = [
             'super_admin' => Role::where('name', 'super_admin')->first(),
             'admin' => Role::where('name', 'admin')->first(),
+            'petani' => Role::where('name', 'petani')->first(),
+            'tenaga_kerja' => Role::where('name', 'tenaga_kerja')->first(),
+            'pemerintah_desa' => Role::where('name', 'pemerintah_desa')->first(),
             'plantation_manager' => Role::where('name', 'plantation_manager')->first(),
             'farmer' => Role::where('name', 'farmer')->first(),
             'owner' => Role::where('name', 'owner')->first(),
@@ -249,7 +252,7 @@ class RoleAccountsSeeder extends Seeder
             $managerUser->roles()->syncWithoutDetaching([$roles['plantation_manager']->id]);
         }
 
-        // 6.4 Petani / Pekerja Lapangan (Farmer)
+        // 6.4 Petani / Pekerja Lapangan (Farmer / Tenaga Kerja)
         $farmerUser = User::firstOrCreate(
             ['email' => 'petani@durianfarm.test'],
             [
@@ -262,6 +265,24 @@ class RoleAccountsSeeder extends Seeder
         );
         if ($roles['farmer'] && ! $farmerUser->hasRole('farmer')) {
             $farmerUser->roles()->syncWithoutDetaching([$roles['farmer']->id]);
+        }
+        if ($roles['tenaga_kerja'] && ! $farmerUser->hasRole('tenaga_kerja')) {
+            $farmerUser->roles()->syncWithoutDetaching([$roles['tenaga_kerja']->id]);
+        }
+
+        // Akun khusus Tenaga Kerja Lapangan (Mobile App)
+        $tenagaKerjaUser = User::firstOrCreate(
+            ['email' => 'tenagakerja@durianfarm.test'],
+            [
+                'organization_id' => $org->id,
+                'name' => 'Budi Santoso (Tenaga Kerja)',
+                'password' => $defaultPassword,
+                'phone' => '081234567814',
+                'is_active' => true,
+            ]
+        );
+        if ($roles['tenaga_kerja'] && ! $tenagaKerjaUser->hasRole('tenaga_kerja')) {
+            $tenagaKerjaUser->roles()->syncWithoutDetaching([$roles['tenaga_kerja']->id]);
         }
 
         // Hubungkan akun user petani dengan tabel 'farmers' dan beri penugasan wilayah
@@ -284,7 +305,7 @@ class RoleAccountsSeeder extends Seeder
             ['assignment_date' => Carbon::now()->subMonths(6)->toDateString()]
         );
 
-        // 6.5 Pemilik Kebun (Owner)
+        // 6.5 Pemilik Kebun / Petani Pengelola Kebun
         $ownerUser = User::firstOrCreate(
             ['email' => 'pemilik@durianfarm.test'],
             [
@@ -298,15 +319,22 @@ class RoleAccountsSeeder extends Seeder
         if ($roles['owner'] && ! $ownerUser->hasRole('owner')) {
             $ownerUser->roles()->syncWithoutDetaching([$roles['owner']->id]);
         }
+        if ($roles['petani'] && ! $ownerUser->hasRole('petani')) {
+            $ownerUser->roles()->syncWithoutDetaching([$roles['petani']->id]);
+        }
 
         $ownerProfile = Owner::firstOrCreate(
             ['name' => 'H. Rahmat Hidayat'],
             [
+                'user_id' => $ownerUser->id,
                 'owner_type' => 'individual',
                 'phone' => '081234567805',
                 'address' => 'Jl. Kebun Raya No. 45, Sukabumi',
             ]
         );
+        if (! $ownerProfile->user_id) {
+            $ownerProfile->update(['user_id' => $ownerUser->id]);
+        }
 
         // Hubungkan kepemilikan kebun
         GardenOwner::firstOrCreate(
@@ -316,5 +344,21 @@ class RoleAccountsSeeder extends Seeder
                 'start_date' => Carbon::now()->subYears(5)->toDateString(),
             ]
         );
+
+        // 6.6 Pemerintah Desa / Perangkat Desa
+        $desaUser = User::firstOrCreate(
+            ['email' => 'desa@durianfarm.test'],
+            [
+                'organization_id' => $org->id,
+                'village_id' => $village->id,
+                'name' => 'Aparatur Pemerintah Desa Cikidang',
+                'password' => $defaultPassword,
+                'phone' => '081234567806',
+                'is_active' => true,
+            ]
+        );
+        if ($roles['pemerintah_desa'] && ! $desaUser->hasRole('pemerintah_desa')) {
+            $desaUser->roles()->syncWithoutDetaching([$roles['pemerintah_desa']->id]);
+        }
     }
 }

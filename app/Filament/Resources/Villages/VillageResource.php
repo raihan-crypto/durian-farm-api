@@ -6,6 +6,7 @@ use App\Filament\Resources\Villages\Pages\ManageVillages;
 use App\Models\Village;
 use App\Support\BanyumasRegionData;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteAction;
@@ -13,8 +14,7 @@ use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -81,17 +81,22 @@ class VillageResource extends Resource
                 ->searchable()
                 ->required()
                 ->live()
-                ->afterStateUpdated(fn (Set $set) => $set('name', null)),
+                ->afterStateUpdated(fn ($set) => $set('name', null)),
 
             Select::make('name')
                 ->label('Nama Desa')
-                ->options(fn (Get $get) => BanyumasRegionData::getVillageOptions($get('district')))
+                ->options(function ($get, ?Village $record) {
+                    $district = $get('district') ?? $record?->district;
+
+                    return $district ? BanyumasRegionData::getVillageOptions($district) : [];
+                })
                 ->searchable()
                 ->required()
                 ->live()
-                ->afterStateUpdated(function (?string $state, Get $get, Set $set) {
-                    if ($state && $get('district')) {
-                        $code = BanyumasRegionData::findVillageCode($state, $get('district'));
+                ->afterStateUpdated(function (?string $state, $get, $set) {
+                    $district = $get('district');
+                    if ($state && $district) {
+                        $code = BanyumasRegionData::findVillageCode($state, $district);
                         if ($code) {
                             $set('village_code', $code);
                         }
@@ -129,8 +134,21 @@ class VillageResource extends Resource
                     ->modalSubmitAction(false),
                 EditAction::make(),
                 DeleteAction::make(),
-                RestoreAction::make(),
-                ForceDeleteAction::make()->visible(fn () => auth()->user()?->hasRole('super_admin')),
+                RestoreAction::make()
+                    ->visible(fn (Model $record) => $record->trashed() && (bool) auth()->user()?->hasRole('super_admin')),
+                ForceDeleteAction::make()
+                    ->visible(fn (Model $record) => $record->trashed() && (bool) auth()->user()?->hasRole('super_admin'))
+                    ->before(function (Action $action, Model $record) {
+                        if ($record->blocks()->withTrashed()->exists()) {
+                            Notification::make()
+                                ->title('Gagal Hapus Permanen')
+                                ->body('Desa ini tidak dapat dihapus permanen karena masih ada data blok (aktif atau di tempat sampah) yang terhubung.')
+                                ->danger()
+                                ->send();
+
+                            $action->halt();
+                        }
+                    }),
             ]);
     }
 

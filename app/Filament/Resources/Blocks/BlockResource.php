@@ -144,8 +144,21 @@ class BlockResource extends Resource
 
                 EditAction::make(),
                 DeleteAction::make(),
-                RestoreAction::make(),
-                ForceDeleteAction::make()->visible(fn () => auth()->user()?->hasRole('super_admin')),
+                RestoreAction::make()
+                    ->visible(fn (Model $record) => $record->trashed() && (bool) auth()->user()?->hasRole('super_admin')),
+                ForceDeleteAction::make()
+                    ->visible(fn (Model $record) => $record->trashed() && (bool) auth()->user()?->hasRole('super_admin'))
+                    ->before(function (Action $action, Model $record) {
+                        if ($record->gardens()->withTrashed()->exists()) {
+                            Notification::make()
+                                ->title('Gagal Hapus Permanen')
+                                ->body('Blok ini tidak dapat dihapus permanen karena masih ada data kebun (aktif atau di tempat sampah) yang terhubung.')
+                                ->danger()
+                                ->send();
+
+                            $action->halt();
+                        }
+                    }),
             ]);
     }
 

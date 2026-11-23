@@ -7,6 +7,7 @@ use App\Models\Block;
 use App\Models\Garden;
 use App\Models\Village;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteAction;
@@ -15,8 +16,7 @@ use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -72,8 +72,8 @@ class GardenResource extends Resource
                 ->searchable()
                 ->live()
                 ->dehydrated(false)
-                ->afterStateUpdated(fn (Set $set) => $set('block_id', null))
-                ->afterStateHydrated(function (Set $set, ?Garden $record) {
+                ->afterStateUpdated(fn ($set) => $set('block_id', null))
+                ->afterStateHydrated(function ($set, ?Garden $record) {
                     if ($record?->block?->village_id) {
                         $set('village_id', $record->block->village_id);
                     }
@@ -82,8 +82,8 @@ class GardenResource extends Resource
 
             Select::make('block_id')
                 ->label('Blok')
-                ->options(function (Get $get) {
-                    $villageId = $get('village_id');
+                ->options(function ($get, ?Garden $record) {
+                    $villageId = $get('village_id') ?? $record?->block?->village_id;
                     if ($villageId) {
                         return Block::where('village_id', $villageId)->pluck('name', 'id');
                     }
@@ -147,8 +147,21 @@ class GardenResource extends Resource
                     ->modalSubmitAction(false),
                 EditAction::make(),
                 DeleteAction::make(),
-                RestoreAction::make(),
-                ForceDeleteAction::make()->visible(fn () => auth()->user()?->hasRole('super_admin')),
+                RestoreAction::make()
+                    ->visible(fn (Model $record) => $record->trashed() && (bool) auth()->user()?->hasRole('super_admin')),
+                ForceDeleteAction::make()
+                    ->visible(fn (Model $record) => $record->trashed() && (bool) auth()->user()?->hasRole('super_admin'))
+                    ->before(function (Action $action, Model $record) {
+                        if ($record->trees()->withTrashed()->exists()) {
+                            Notification::make()
+                                ->title('Gagal Hapus Permanen')
+                                ->body('Kebun ini tidak dapat dihapus permanen karena masih ada data pohon (aktif atau di tempat sampah) yang terhubung.')
+                                ->danger()
+                                ->send();
+
+                            $action->halt();
+                        }
+                    }),
             ]);
     }
 

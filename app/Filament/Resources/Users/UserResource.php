@@ -106,9 +106,9 @@ class UserResource extends Resource
             ])
             ->recordActions([
                 EditAction::make(),
-                DeleteAction::make()->visible(fn (User $record) => ! $record->hasRole('super_admin')),
-                RestoreAction::make()->visible(fn () => auth()->user()?->hasRole('super_admin')),
-                ForceDeleteAction::make()->visible(fn (User $record) => ! $record->hasRole('super_admin') && auth()->user()?->hasRole('super_admin')),
+                DeleteAction::make()->visible(fn (User $record) => ! $record->trashed() && ! $record->hasRole('super_admin')),
+                RestoreAction::make()->visible(fn (User $record) => $record->trashed() && (bool) auth()->user()?->hasRole('super_admin')),
+                ForceDeleteAction::make()->visible(fn (User $record) => $record->trashed() && ! $record->hasRole('super_admin') && (bool) auth()->user()?->hasRole('super_admin')),
             ]);
     }
 

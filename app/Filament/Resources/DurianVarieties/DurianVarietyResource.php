@@ -43,17 +43,17 @@ class DurianVarietyResource extends Resource
 
     public static function canCreate(): bool
     {
-        return (bool) auth()->user()?->hasPermission('trees.manage');
+        return (bool) auth()->user()?->hasPermission('varieties.manage');
     }
 
     public static function canEdit(Model $record): bool
     {
-        return (bool) auth()->user()?->hasPermission('trees.manage');
+        return (bool) auth()->user()?->hasPermission('varieties.manage');
     }
 
     public static function canDelete(Model $record): bool
     {
-        return (bool) auth()->user()?->hasPermission('trees.manage');
+        return (bool) auth()->user()?->hasPermission('varieties.manage');
     }
 
     public static function form(Schema $schema): Schema

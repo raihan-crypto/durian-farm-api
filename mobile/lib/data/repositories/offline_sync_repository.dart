@@ -298,7 +298,7 @@ class OfflineSyncRepository {
             whereArgs: [item.clientTransactionId],
           );
         }
-        rethrow;
+        failed += items.length;
       }
     }
 
@@ -463,7 +463,159 @@ class OfflineSyncRepository {
     return rows.map(PendingPhotoItem.fromMap).toList();
   }
 
+  /// Returns the count of unsynchronized offline activities (pending or failed).
+  Future<int> getPendingActivityCount() => _db.getPendingSyncCount();
+
+  /// Returns the count of unsynchronized deferred photos (pending or failed).
+  Future<int> getPendingPhotoCount() => _db.getPendingPhotoCount();
+
   Future<String?> getLastSyncAt() => _storage.getLastSyncAt();
+
+  /// Pulls incremental delta changes from server since lastSyncAt (SRS 12.3 & 16.3).
+  /// If lastSyncAt is null, falls back to full bootstrapFromServer().
+  Future<int> pullDeltaFromServer() async {
+    final lastSyncAt = await _storage.getLastSyncAt();
+    if (lastSyncAt == null) {
+      await bootstrapFromServer();
+      return -1;
+    }
+
+    final session = await _storage.getSession();
+    if (session == null) return 0;
+    final baseUrl = await _storage.getBaseUrl();
+
+    final response = await _api.pullSyncChanges(
+      baseUrl: baseUrl,
+      token: session.token,
+      since: lastSyncAt,
+    );
+    final responseData = response['data'] as Map<String, Object?>?;
+    if (responseData == null) return 0;
+
+    final changes = (responseData['changes'] as Map<String, Object?>?) ?? responseData;
+    final changedCount = await persistDeltaChanges(changes);
+
+    final serverTime = responseData['server_time'] as String?;
+    if (serverTime != null) {
+      await _storage.saveLastSyncAt(serverTime);
+    }
+
+    return changedCount;
+  }
+
+  /// Persists incremental delta changes into local SQLite using upsert without wiping tables.
+  Future<int> persistDeltaChanges(Map<String, Object?> data) async {
+    final db = await _db.database;
+    var totalUpserted = 0;
+
+    await db.transaction((txn) async {
+      totalUpserted += await _upsertRows(txn, 'villages', data['villages'], (r) => {
+            'id': r['id'],
+            'name': r['name'],
+            'district': r['district'],
+            'regency': r['regency'],
+            'province': r['province'],
+            'updated_at': r['updated_at'],
+          });
+
+      totalUpserted += await _upsertRows(txn, 'blocks', data['blocks'], (r) => {
+            'id': r['id'],
+            'village_id': r['village_id'],
+            'name': r['name'],
+            'area_hectares': (r['area_hectares'] as num?)?.toDouble(),
+            'description': r['description'],
+            'updated_at': r['updated_at'],
+          });
+
+      totalUpserted += await _upsertRows(txn, 'gardens', data['gardens'], (r) => {
+            'id': r['id'],
+            'block_id': r['block_id'],
+            'name': r['name'],
+            'area_hectares': (r['area_hectares'] as num?)?.toDouble(),
+            'address': r['address'],
+            'latitude': (r['latitude'] as num?)?.toDouble(),
+            'longitude': (r['longitude'] as num?)?.toDouble(),
+            'description': r['description'],
+            'updated_at': r['updated_at'],
+          });
+
+      totalUpserted += await _upsertRows(txn, 'durian_varieties', data['durian_varieties'], (r) => {
+            'id': r['id'],
+            'code': r['code'],
+            'name': r['name'],
+            'origin': r['origin'],
+            'description': r['description'],
+            'updated_at': r['updated_at'],
+          });
+
+      totalUpserted += await _upsertRows(txn, 'product_categories', data['product_categories'], (r) => {
+            'id': r['id'],
+            'name': r['name'],
+            'description': r['description'],
+            'updated_at': r['updated_at'],
+          });
+
+      totalUpserted += await _upsertRows(txn, 'agricultural_products', data['agricultural_products'], (r) => {
+            'id': r['id'],
+            'category_id': r['category_id'],
+            'name': r['name'],
+            'brand': r['brand'],
+            'unit': r['unit'],
+            'updated_at': r['updated_at'],
+          });
+
+      totalUpserted += await _upsertRows(txn, 'trees', data['trees'], (r) => {
+            'id': r['id'],
+            'garden_id': r['garden_id'],
+            'variety_id': r['variety_id'],
+            'tree_code': r['tree_code'],
+            'tree_name': r['tree_name'],
+            'planted_at': r['planted_at'],
+            'status': r['status'] ?? 'active',
+            'qr_token': r['qr_token'],
+            'notes': r['notes'],
+            'updated_at': r['updated_at'],
+          });
+
+      totalUpserted += await _upsertRows(txn, 'harvest_seasons', data['harvest_seasons'], (r) => {
+            'id': r['id'],
+            'garden_id': r['garden_id'],
+            'name': r['name'],
+            'start_date': r['start_date'],
+            'end_date': r['end_date'],
+            'status': r['status'],
+            'updated_at': r['updated_at'],
+          });
+
+      totalUpserted += await _upsertRows(txn, 'harvest_sessions', data['harvest_sessions'], (r) => {
+            'id': r['id'],
+            'season_id': r['season_id'],
+            'garden_id': r['garden_id'],
+            'harvest_date': r['harvest_date'],
+            'session_name': r['session_name'],
+            'updated_at': r['updated_at'],
+          });
+    });
+
+    return totalUpserted;
+  }
+
+  Future<int> _upsertRows(
+    Transaction txn,
+    String table,
+    Object? rawList,
+    Map<String, Object?> Function(Map<String, Object?> row) mapper,
+  ) async {
+    final rows = (rawList as List<Object?>? ?? []).cast<Map<String, Object?>>();
+    for (final row in rows) {
+      await txn.insert(
+        table,
+        mapper(row),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    return rows.length;
+  }
 
   Future<void> _replaceRows(
     Transaction txn,

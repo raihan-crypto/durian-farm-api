@@ -33,11 +33,17 @@ class AuthController extends Controller
         }
 
         $deviceName = $request->input('device_name', 'api-client');
-        $token = $user->createToken($deviceName)->plainTextToken;
+        $expirationMinutes = config('sanctum.expiration');
+        $expiresAt = is_numeric($expirationMinutes) && (int) $expirationMinutes > 0
+            ? now()->addMinutes((int) $expirationMinutes)
+            : null;
+
+        $token = $user->createToken($deviceName, ['*'], $expiresAt)->plainTextToken;
 
         return $this->successResponse([
             'token' => $token,
             'token_type' => 'Bearer',
+            'expires_at' => $expiresAt?->toISOString(),
             'user' => new UserResource($user),
             'roles' => $user->roles->pluck('name'),
             'permissions' => $user->roles->flatMap->permissions->pluck('name')->unique()->values(),

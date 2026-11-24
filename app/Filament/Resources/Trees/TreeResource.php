@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Trees;
 
 use App\Filament\Resources\Trees\Pages\ManageTrees;
 use App\Models\Tree;
+use App\Services\TerritoryScopeService;
 use App\Services\TreeQrCodeService;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -69,7 +70,20 @@ class TreeResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Select::make('garden_id')->label('Kebun')->relationship('garden', 'name')->searchable()->preload()->required(),
+            Select::make('garden_id')
+                ->label('Kebun')
+                ->relationship('garden', 'name', function ($query) {
+                    $user = auth()->user();
+                    if ($user) {
+                        $accessibleGardenIds = app(TerritoryScopeService::class)->getAccessibleGardenIds($user);
+                        if ($accessibleGardenIds !== null) {
+                            $query->whereIn('id', $accessibleGardenIds);
+                        }
+                    }
+                })
+                ->searchable()
+                ->preload()
+                ->required(),
             Select::make('variety_id')->label('Varietas')->relationship('variety', 'name')->searchable()->preload(),
             TextInput::make('tree_code')->label('Kode Pohon')->required()->maxLength(100),
             TextInput::make('tree_identity_number')
@@ -156,10 +170,20 @@ class TreeResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
+
+        $user = auth()->user();
+        if ($user) {
+            $accessibleGardenIds = app(TerritoryScopeService::class)->getAccessibleGardenIds($user);
+            if ($accessibleGardenIds !== null) {
+                $query->whereIn('garden_id', $accessibleGardenIds);
+            }
+        }
+
+        return $query;
     }
 
     public static function getPages(): array

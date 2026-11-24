@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Villages;
 use App\Filament\Resources\Villages\Pages\ManageVillages;
 use App\Models\Village;
 use App\Services\TerritoryDuplicateGuard;
+use App\Services\TerritoryScopeService;
 use App\Support\BanyumasRegionData;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -49,17 +50,23 @@ class VillageResource extends Resource
 
     public static function canCreate(): bool
     {
-        return (bool) auth()->user()?->hasPermission('territory.manage');
+        $user = auth()->user();
+
+        return (bool) ($user && ($user->hasRole('super_admin') || $user->hasRole('admin')) && $user->hasPermission('territory.manage'));
     }
 
     public static function canEdit(Model $record): bool
     {
-        return (bool) auth()->user()?->hasPermission('territory.manage');
+        $user = auth()->user();
+
+        return (bool) ($user && ($user->hasRole('super_admin') || $user->hasRole('admin')) && $user->hasPermission('territory.manage'));
     }
 
     public static function canDelete(Model $record): bool
     {
-        return (bool) auth()->user()?->hasPermission('territory.manage');
+        $user = auth()->user();
+
+        return (bool) ($user && ($user->hasRole('super_admin') || $user->hasRole('admin')) && $user->hasPermission('territory.manage'));
     }
 
     public static function form(Schema $schema): Schema
@@ -152,10 +159,20 @@ class VillageResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
+
+        $user = auth()->user();
+        if ($user) {
+            $accessibleVillageIds = app(TerritoryScopeService::class)->getAccessibleVillageIds($user);
+            if ($accessibleVillageIds !== null) {
+                $query->whereIn('id', $accessibleVillageIds);
+            }
+        }
+
+        return $query;
     }
 
     public static function getPages(): array

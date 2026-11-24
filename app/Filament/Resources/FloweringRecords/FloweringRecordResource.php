@@ -4,6 +4,7 @@ namespace App\Filament\Resources\FloweringRecords;
 
 use App\Filament\Resources\FloweringRecords\Pages\ManageFloweringRecords;
 use App\Models\FloweringRecord;
+use App\Services\TerritoryScopeService;
 use BackedEnum;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -15,6 +16,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
@@ -83,6 +85,23 @@ class FloweringRecordResource extends Resource
                 SelectFilter::make('tree_id')->label('Pohon')->relationship('tree', 'tree_code'),
             ])
             ->defaultSort('flowering_date', 'desc');
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        if ($user) {
+            $accessibleGardenIds = app(TerritoryScopeService::class)->getAccessibleGardenIds($user);
+            if ($accessibleGardenIds !== null) {
+                $query->whereHas('tree', function ($q) use ($accessibleGardenIds) {
+                    $q->whereIn('garden_id', $accessibleGardenIds);
+                });
+            }
+        }
+
+        return $query;
     }
 
     public static function getPages(): array

@@ -23,14 +23,16 @@ class RbacSeeder extends Seeder
             ['name' => 'organizations.view', 'description' => 'Melihat data organisasi'],
 
             // Territory
-            ['name' => 'territory.manage', 'description' => 'Mengelola wilayah, blok, dan kebun'],
+            ['name' => 'territory.manage', 'description' => 'Mengelola wilayah dan blok'],
             ['name' => 'territory.view', 'description' => 'Melihat data wilayah, blok, dan kebun'],
+            ['name' => 'gardens.manage', 'description' => 'Mengelola data kebun dan penugasan tenaga kerja kebun'],
             ['name' => 'blocks.request', 'description' => 'Mengajukan penambahan atau penghapusan blok oleh pemerintah desa'],
             ['name' => 'ownership.manage', 'description' => 'Mengelola kepemilikan dan penugasan'],
             ['name' => 'ownership.view', 'description' => 'Melihat kepemilikan dan penugasan'],
 
             // Trees
-            ['name' => 'trees.manage', 'description' => 'Mengelola data pohon dan varietas'],
+            ['name' => 'varieties.manage', 'description' => 'Mengelola master varietas durian'],
+            ['name' => 'trees.manage', 'description' => 'Mengelola data pohon'],
             ['name' => 'trees.view', 'description' => 'Melihat data pohon dan riwayat'],
             ['name' => 'trees.measure', 'description' => 'Mencatat pengukuran pohon'],
 
@@ -87,9 +89,8 @@ class RbacSeeder extends Seeder
         $petaniPermissions = collect($permissionModels)->filter(function ($item, $key) {
             return in_array($key, [
                 'territory.view',
-                'territory.manage',
+                'gardens.manage',
                 'ownership.view',
-                'ownership.manage',
                 'trees.view',
                 'trees.manage',
                 'trees.measure',

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\HarvestSessions;
 
 use App\Filament\Resources\HarvestSessions\Pages\ManageHarvestSessions;
 use App\Models\HarvestSession;
+use App\Services\TerritoryScopeService;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -17,6 +18,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
@@ -87,6 +89,21 @@ class HarvestSessionResource extends Resource
                 EditAction::make(),
                 DeleteAction::make(),
             ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        if ($user) {
+            $accessibleGardenIds = app(TerritoryScopeService::class)->getAccessibleGardenIds($user);
+            if ($accessibleGardenIds !== null) {
+                $query->whereIn('garden_id', $accessibleGardenIds);
+            }
+        }
+
+        return $query;
     }
 
     public static function getPages(): array

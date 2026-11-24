@@ -90,13 +90,17 @@ class DashboardViewModel extends ChangeNotifier {
 
     try {
       final result = await syncRepository.syncPending();
-      await syncRepository.bootstrapFromServer();
+      final pulledCount = await syncRepository.pullDeltaFromServer();
       await refreshLocalData();
+
+      final pullNote = pulledCount < 0
+          ? 'data awal dimuat'
+          : '$pulledCount perubahan ditarik';
 
       _statusMessage =
           'Sinkronisasi selesai: ${result.syncedCount} terkirim, '
-          '${result.photosUploaded} foto, ${result.conflictCount} konflik, '
-          '${result.failedCount} gagal.';
+          '${result.photosUploaded} foto, $pullNote, '
+          '${result.conflictCount} konflik, ${result.failedCount} gagal.';
     } catch (e) {
       _statusMessage = 'Gagal sinkronisasi: $e';
     } finally {

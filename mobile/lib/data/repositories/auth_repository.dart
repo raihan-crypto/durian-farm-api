@@ -48,6 +48,13 @@ class AuthRepository {
     return session;
   }
 
+  /// Safely logs out the user: revokes remote token if reachable and clears
+  /// local authentication session credentials.
+  ///
+  /// IMPORTANT (RSK-01): Local SQLite database tables (including sync_queue,
+  /// photo_queue, and supporting plantation models) are strictly preserved so
+  /// offline field activities and photos are not lost. They can be synchronized
+  /// once a user logs in again.
   Future<void> logout() async {
     final session = await sessionStorage.getSession();
     final baseUrl = await sessionStorage.getBaseUrl();
@@ -55,10 +62,9 @@ class AuthRepository {
       try {
         await apiClient.logout(baseUrl: baseUrl, token: session.token);
       } catch (_) {
-        // Offline logout still clears local credentials safely.
+        // Offline logout still clears local credentials safely without network.
       }
     }
     await sessionStorage.clearSession();
-    await localDatabase.clearAllData();
   }
 }

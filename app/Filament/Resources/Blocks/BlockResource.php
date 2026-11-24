@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Blocks;
 use App\Filament\Resources\Blocks\Pages\ManageBlocks;
 use App\Models\Block;
 use App\Services\TerritoryDuplicateGuard;
+use App\Services\TerritoryScopeService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -51,17 +52,45 @@ class BlockResource extends Resource
 
     public static function canCreate(): bool
     {
-        return (bool) (auth()->user()?->hasPermission('territory.manage') || auth()->user()?->hasPermission('blocks.request'));
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+            return $user->hasPermission('territory.manage');
+        }
+
+        if ($user->hasRole('pemerintah_desa')) {
+            return $user->hasPermission('blocks.request');
+        }
+
+        return false;
     }
 
     public static function canEdit(Model $record): bool
     {
-        return (bool) auth()->user()?->hasPermission('territory.manage');
+        $user = auth()->user();
+
+        return (bool) ($user && ($user->hasRole('super_admin') || $user->hasRole('admin')) && $user->hasPermission('territory.manage'));
     }
 
     public static function canDelete(Model $record): bool
     {
-        return (bool) (auth()->user()?->hasPermission('territory.manage') || auth()->user()?->hasPermission('blocks.request'));
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+            return $user->hasPermission('territory.manage');
+        }
+
+        if ($user->hasRole('pemerintah_desa')) {
+            return $user->hasPermission('blocks.request');
+        }
+
+        return false;
     }
 
     public static function form(Schema $schema): Schema
@@ -192,10 +221,20 @@ class BlockResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
+
+        $user = auth()->user();
+        if ($user) {
+            $accessibleBlockIds = app(TerritoryScopeService::class)->getAccessibleBlockIds($user);
+            if ($accessibleBlockIds !== null) {
+                $query->whereIn('id', $accessibleBlockIds);
+            }
+        }
+
+        return $query;
     }
 
     public static function getPages(): array

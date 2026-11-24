@@ -146,12 +146,30 @@ class ApiClient {
       };
 
   Map<String, Object?> _decodeOrThrow(http.Response response) {
-    final decoded = jsonDecode(response.body) as Map<String, Object?>;
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return decoded;
+    Map<String, Object?>? decoded;
+    try {
+      final parsed = jsonDecode(response.body);
+      if (parsed is Map<String, Object?>) {
+        decoded = parsed;
+      }
+    } catch (_) {
+      // Body may not be valid JSON (e.g. plain text or HTML 500 error from web server)
     }
-    final message = (decoded['message'] as String?) ??
-        'Permintaan gagal (${response.statusCode})';
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (decoded != null) {
+        return decoded;
+      }
+      throw ApiException(
+        'Format respons server tidak valid (${response.statusCode})',
+        statusCode: response.statusCode,
+      );
+    }
+
+    final message = (decoded?['message'] as String?) ??
+        (response.body.isNotEmpty && response.body.length < 200
+            ? response.body
+            : 'Permintaan gagal (${response.statusCode})');
     throw ApiException(message, statusCode: response.statusCode);
   }
 }

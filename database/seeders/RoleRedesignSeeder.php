@@ -22,6 +22,8 @@ class RoleRedesignSeeder extends Seeder
         // 1. Ensure new/updated permissions exist
         $newPermissions = [
             ['name' => 'blocks.request', 'description' => 'Mengajukan penambahan atau penghapusan blok oleh pemerintah desa'],
+            ['name' => 'gardens.manage', 'description' => 'Mengelola data kebun dan penugasan tenaga kerja kebun'],
+            ['name' => 'varieties.manage', 'description' => 'Mengelola master varietas durian'],
         ];
 
         foreach ($newPermissions as $p) {
@@ -52,9 +54,8 @@ class RoleRedesignSeeder extends Seeder
         );
         $petaniPermNames = [
             'territory.view',
-            'territory.manage',
+            'gardens.manage',
             'ownership.view',
-            'ownership.manage',
             'trees.view',
             'trees.manage',
             'trees.measure',

@@ -98,6 +98,11 @@ class GardenController extends Controller
     public function store(GardenRequest $request): JsonResponse
     {
         $data = $request->validated();
+
+        if (! $this->territoryScope->canAccessBlock($request->user(), $data['block_id'])) {
+            return $this->errorResponse('Anda tidak memiliki akses ke blok ini', 403);
+        }
+
         $owners = $data['owners'] ?? [];
         $farmers = $data['farmers'] ?? [];
         $today = Carbon::today();
@@ -213,6 +218,10 @@ class GardenController extends Controller
             return $this->errorResponse('Kebun tidak ditemukan', 404);
         }
 
+        if (! $this->territoryScope->canAccessGarden($request->user(), $garden->id)) {
+            return $this->errorResponse('Anda tidak memiliki akses untuk mengubah kebun ini', 403);
+        }
+
         $gardenData = collect($request->validated())->only([
             'block_id',
             'name',
@@ -222,6 +231,12 @@ class GardenController extends Controller
             'longitude',
             'description',
         ])->all();
+
+        if (isset($gardenData['block_id']) && $gardenData['block_id'] !== $garden->block_id) {
+            if (! $this->territoryScope->canAccessBlock($request->user(), $gardenData['block_id'])) {
+                return $this->errorResponse('Anda tidak memiliki akses ke blok tujuan', 403);
+            }
+        }
 
         $garden->update($gardenData);
         $garden->load(['block.village', 'gardenOwners.owner', 'gardenFarmers.farmer'])
@@ -233,12 +248,16 @@ class GardenController extends Controller
     /**
      * Remove the specified garden if it has no registered trees.
      */
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $garden = Garden::find($id);
 
         if (! $garden) {
             return $this->errorResponse('Kebun tidak ditemukan', 404);
+        }
+
+        if (! $this->territoryScope->canAccessGarden($request->user(), $garden->id)) {
+            return $this->errorResponse('Anda tidak memiliki akses untuk menghapus kebun ini', 403);
         }
 
         if ($garden->trees()->exists()) {
@@ -295,6 +314,10 @@ class GardenController extends Controller
             return $this->errorResponse('Kebun tidak ditemukan', 404);
         }
 
+        if (! $this->territoryScope->canAccessGarden($request->user(), $garden->id)) {
+            return $this->errorResponse('Anda tidak memiliki akses ke kebun ini', 403);
+        }
+
         $data = $request->validated();
         $today = Carbon::today();
         $startDate = $data['start_date'] ?? $today->toDateString();
@@ -343,6 +366,10 @@ class GardenController extends Controller
 
         if (! $ownership) {
             return $this->errorResponse('Data kepemilikan kebun tidak ditemukan', 404);
+        }
+
+        if (! $this->territoryScope->canAccessGarden($request->user(), $id)) {
+            return $this->errorResponse('Anda tidak memiliki akses ke kebun ini', 403);
         }
 
         $data = $request->validated();
@@ -394,7 +421,7 @@ class GardenController extends Controller
     /**
      * Remove an ownership record from a garden.
      */
-    public function removeOwner(string $id, string $ownershipId): JsonResponse
+    public function removeOwner(Request $request, string $id, string $ownershipId): JsonResponse
     {
         $ownership = GardenOwner::query()
             ->where('garden_id', $id)
@@ -402,6 +429,10 @@ class GardenController extends Controller
 
         if (! $ownership) {
             return $this->errorResponse('Data kepemilikan kebun tidak ditemukan', 404);
+        }
+
+        if (! $this->territoryScope->canAccessGarden($request->user(), $id)) {
+            return $this->errorResponse('Anda tidak memiliki akses ke kebun ini', 403);
         }
 
         $ownership->delete();
@@ -454,6 +485,10 @@ class GardenController extends Controller
             return $this->errorResponse('Kebun tidak ditemukan', 404);
         }
 
+        if (! $this->territoryScope->canAccessGarden($request->user(), $garden->id)) {
+            return $this->errorResponse('Anda tidak memiliki akses ke kebun ini', 403);
+        }
+
         $data = $request->validated();
         $assignmentDate = $data['assignment_date'] ?? Carbon::today()->toDateString();
 
@@ -494,6 +529,10 @@ class GardenController extends Controller
 
         if (! $assignment) {
             return $this->errorResponse('Penugasan petani pada kebun tidak ditemukan', 404);
+        }
+
+        if (! $this->territoryScope->canAccessGarden($request->user(), $id)) {
+            return $this->errorResponse('Anda tidak memiliki akses ke kebun ini', 403);
         }
 
         $data = $request->validated();
@@ -537,7 +576,7 @@ class GardenController extends Controller
     /**
      * Remove a farmer assignment from a garden.
      */
-    public function removeFarmerAssignment(string $id, string $assignmentId): JsonResponse
+    public function removeFarmerAssignment(Request $request, string $id, string $assignmentId): JsonResponse
     {
         $assignment = GardenFarmer::query()
             ->where('garden_id', $id)
@@ -545,6 +584,10 @@ class GardenController extends Controller
 
         if (! $assignment) {
             return $this->errorResponse('Penugasan petani pada kebun tidak ditemukan', 404);
+        }
+
+        if (! $this->territoryScope->canAccessGarden($request->user(), $id)) {
+            return $this->errorResponse('Anda tidak memiliki akses ke kebun ini', 403);
         }
 
         $assignment->delete();

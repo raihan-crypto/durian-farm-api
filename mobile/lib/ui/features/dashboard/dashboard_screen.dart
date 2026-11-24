@@ -42,6 +42,83 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
+  Future<void> _handleLogout(BuildContext context) async {
+    final pendingActivities = _viewModel.pendingCount;
+    final pendingPhotos = _viewModel.photoQueue
+        .where((p) =>
+            p.status == LocalSyncStatus.pending ||
+            p.status == LocalSyncStatus.failed)
+        .length;
+    final totalPending = pendingActivities + pendingPhotos;
+
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => AlertDialog(
+        icon: Icon(
+          totalPending > 0
+              ? Icons.warning_amber_rounded
+              : Icons.help_outline_rounded,
+          size: 40,
+          color: totalPending > 0 ? Colors.orange.shade800 : Colors.blue.shade700,
+        ),
+        title: Text(
+          totalPending > 0
+              ? 'Peringatan: Data Belum Disinkronkan'
+              : 'Konfirmasi Keluar',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (totalPending > 0) ...[
+              Text(
+                'Terdapat $pendingActivities aktivitas dan $pendingPhotos foto yang belum tersinkronisasi ke server.',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Data Anda akan tetap tersimpan aman di perangkat ini dan tidak akan dihapus. Anda dapat melanjutkan sinkronisasi saat login kembali.',
+                style: TextStyle(fontSize: 13, color: Colors.black87),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Apakah Anda tetap ingin keluar dari akun sekarang?',
+                style: TextStyle(fontSize: 13),
+              ),
+            ] else ...[
+              const Text(
+                'Apakah Anda yakin ingin keluar dari akun Anda?',
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: totalPending > 0
+                ? FilledButton.styleFrom(
+                    backgroundColor: Colors.orange.shade900,
+                    foregroundColor: Colors.white,
+                  )
+                : null,
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: Text(totalPending > 0 ? 'Tetap Keluar' : 'Keluar'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && mounted) {
+      await widget.authRepository.logout();
+      widget.onLogout();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -87,10 +164,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               IconButton(
                 tooltip: 'Keluar',
-                onPressed: () async {
-                  await widget.authRepository.logout();
-                  widget.onLogout();
-                },
+                onPressed: () => _handleLogout(context),
                 icon: const Icon(Icons.logout),
               ),
             ],

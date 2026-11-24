@@ -4,6 +4,7 @@ namespace App\Filament\Resources\HarvestRecords;
 
 use App\Filament\Resources\HarvestRecords\Pages\ManageHarvestRecords;
 use App\Models\HarvestRecord;
+use App\Services\TerritoryScopeService;
 use BackedEnum;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
@@ -15,6 +16,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
@@ -85,6 +87,21 @@ class HarvestRecordResource extends Resource
             ->recordActions([
                 EditAction::make(),
             ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        if ($user) {
+            $accessibleGardenIds = app(TerritoryScopeService::class)->getAccessibleGardenIds($user);
+            if ($accessibleGardenIds !== null) {
+                $query->whereIn('garden_id', $accessibleGardenIds);
+            }
+        }
+
+        return $query;
     }
 
     public static function getPages(): array

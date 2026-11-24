@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\HarvestSession;
+use App\Services\TerritoryScopeService;
 use Filament\Widgets\ChartWidget;
 
 class HarvestTrendChart extends ChartWidget
@@ -13,7 +14,17 @@ class HarvestTrendChart extends ChartWidget
 
     protected function getData(): array
     {
-        $sessions = HarvestSession::query()
+        $user = auth()->user();
+        $query = HarvestSession::query();
+
+        if ($user) {
+            $accessibleGardenIds = app(TerritoryScopeService::class)->getAccessibleGardenIds($user);
+            if ($accessibleGardenIds !== null) {
+                $query->whereIn('garden_id', $accessibleGardenIds);
+            }
+        }
+
+        $sessions = $query
             ->withSum('records', 'total_weight_kg')
             ->withSum('records', 'fruit_count')
             ->orderByDesc('harvest_date')

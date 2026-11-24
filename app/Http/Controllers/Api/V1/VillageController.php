@@ -122,6 +122,10 @@ class VillageController extends Controller
             return $this->errorResponse('Desa tidak ditemukan', 404);
         }
 
+        if (! $this->territoryScope->canAccessVillage($request->user(), $village->id)) {
+            return $this->errorResponse('Anda tidak memiliki akses untuk mengubah desa ini', 403);
+        }
+
         $village->update($request->validated());
         $village = $this->baseVillageQuery()->find($village->id);
 
@@ -131,12 +135,16 @@ class VillageController extends Controller
     /**
      * Remove the specified village if it has no blocks.
      */
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $village = Village::find($id);
 
         if (! $village) {
             return $this->errorResponse('Desa tidak ditemukan', 404);
+        }
+
+        if (! $this->territoryScope->canAccessVillage($request->user(), $village->id)) {
+            return $this->errorResponse('Anda tidak memiliki akses untuk menghapus desa ini', 403);
         }
 
         if ($village->blocks()->exists()) {

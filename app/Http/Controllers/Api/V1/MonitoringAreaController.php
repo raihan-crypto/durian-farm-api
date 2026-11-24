@@ -91,6 +91,10 @@ class MonitoringAreaController extends Controller
             return $this->errorResponse('Area pemantauan tidak ditemukan', 404);
         }
 
+        if (! $this->territoryScope->canAccessGarden($request->user(), $area->garden_id)) {
+            return $this->errorResponse('Anda tidak memiliki akses ke area pemantauan ini', 403);
+        }
+
         $validated = $request->validate([
             'garden_id' => ['required', 'uuid', 'exists:gardens,id'],
             'name' => ['required', 'string', 'max:150'],
@@ -100,18 +104,26 @@ class MonitoringAreaController extends Controller
             'area_hectares' => ['nullable', 'numeric', 'min:0', 'max:99999999.9999'],
         ]);
 
+        if ($validated['garden_id'] !== $area->garden_id && ! $this->territoryScope->canAccessGarden($request->user(), $validated['garden_id'])) {
+            return $this->errorResponse('Anda tidak memiliki akses ke kebun tujuan', 403);
+        }
+
         $area->update($validated);
         $area->load('garden:id,name')->loadCount('iotDevices');
 
         return $this->successResponse($area, 'Area pemantauan berhasil diperbarui');
     }
 
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $area = MonitoringArea::find($id);
 
         if (! $area) {
             return $this->errorResponse('Area pemantauan tidak ditemukan', 404);
+        }
+
+        if (! $this->territoryScope->canAccessGarden($request->user(), $area->garden_id)) {
+            return $this->errorResponse('Anda tidak memiliki akses untuk menghapus area pemantauan ini', 403);
         }
 
         if ($area->iotDevices()->exists()) {

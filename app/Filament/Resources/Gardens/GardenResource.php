@@ -8,6 +8,7 @@ use App\Models\Farmer;
 use App\Models\Garden;
 use App\Models\Village;
 use App\Services\TerritoryDuplicateGuard;
+use App\Services\TerritoryScopeService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -49,12 +50,16 @@ class GardenResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return (bool) auth()->user()?->hasPermission('territory.view');
+        $user = auth()->user();
+
+        return (bool) ($user?->hasPermission('territory.view') || $user?->hasPermission('gardens.manage'));
     }
 
     public static function canCreate(): bool
     {
-        return (bool) auth()->user()?->hasPermission('territory.manage');
+        $user = auth()->user();
+
+        return (bool) ($user?->hasPermission('gardens.manage') || $user?->hasPermission('territory.manage'));
     }
 
     public static function canEdit(Model $record): bool
@@ -73,6 +78,8 @@ class GardenResource extends Resource
             if ($ownerId && $record instanceof Garden) {
                 return $record->owners()->where('owners.id', $ownerId)->exists();
             }
+
+            return false;
         }
 
         return (bool) $user->hasPermission('territory.manage');
@@ -80,7 +87,25 @@ class GardenResource extends Resource
 
     public static function canDelete(Model $record): bool
     {
-        return (bool) auth()->user()?->hasPermission('territory.manage');
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+            return true;
+        }
+
+        if ($user->hasRole('petani')) {
+            $ownerId = $user->ownerProfile?->id;
+            if ($ownerId && $record instanceof Garden) {
+                return $record->owners()->where('owners.id', $ownerId)->exists();
+            }
+
+            return false;
+        }
+
+        return (bool) $user->hasPermission('territory.manage');
     }
 
     public static function form(Schema $schema): Schema
@@ -279,10 +304,27 @@ class GardenResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
+
+        $user = auth()->user();
+        if ($user) {
+            if ($user->hasRole('petani')) {
+                $accessibleBlockIds = app(TerritoryScopeService::class)->getAccessibleBlockIds($user);
+                if ($accessibleBlockIds !== null) {
+                    $query->whereIn('block_id', $accessibleBlockIds);
+                }
+            } else {
+                $accessibleGardenIds = app(TerritoryScopeService::class)->getAccessibleGardenIds($user);
+                if ($accessibleGardenIds !== null) {
+                    $query->whereIn('id', $accessibleGardenIds);
+                }
+            }
+        }
+
+        return $query;
     }
 
     public static function getPages(): array

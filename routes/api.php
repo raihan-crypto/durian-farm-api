@@ -95,18 +95,18 @@ Route::prefix('v1')->group(function () {
 
         // Gardens management, multi-ownership & garden farmer assignments
         Route::get('/gardens', [GardenController::class, 'index'])->middleware('permission:territory.view');
-        Route::post('/gardens', [GardenController::class, 'store'])->middleware('permission:territory.manage');
+        Route::post('/gardens', [GardenController::class, 'store'])->middleware('permission:gardens.manage,territory.manage');
         Route::get('/gardens/{id}', [GardenController::class, 'show'])->middleware('permission:territory.view');
-        Route::put('/gardens/{id}', [GardenController::class, 'update'])->middleware('permission:territory.manage');
-        Route::delete('/gardens/{id}', [GardenController::class, 'destroy'])->middleware('permission:territory.manage');
+        Route::put('/gardens/{id}', [GardenController::class, 'update'])->middleware('permission:gardens.manage,territory.manage');
+        Route::delete('/gardens/{id}', [GardenController::class, 'destroy'])->middleware('permission:gardens.manage,territory.manage');
         Route::get('/gardens/{id}/owners', [GardenController::class, 'owners'])->middleware('permission:territory.view');
         Route::post('/gardens/{id}/owners', [GardenController::class, 'assignOwner'])->middleware('permission:ownership.manage');
         Route::put('/gardens/{id}/owners/{ownershipId}', [GardenController::class, 'updateOwner'])->middleware('permission:ownership.manage');
         Route::delete('/gardens/{id}/owners/{ownershipId}', [GardenController::class, 'removeOwner'])->middleware('permission:ownership.manage');
         Route::get('/gardens/{id}/farmers', [GardenController::class, 'farmers'])->middleware('permission:territory.view');
-        Route::post('/gardens/{id}/farmers', [GardenController::class, 'assignFarmer'])->middleware('permission:ownership.manage');
-        Route::put('/gardens/{id}/farmers/{assignmentId}', [GardenController::class, 'updateFarmerAssignment'])->middleware('permission:ownership.manage');
-        Route::delete('/gardens/{id}/farmers/{assignmentId}', [GardenController::class, 'removeFarmerAssignment'])->middleware('permission:ownership.manage');
+        Route::post('/gardens/{id}/farmers', [GardenController::class, 'assignFarmer'])->middleware('permission:gardens.manage,ownership.manage');
+        Route::put('/gardens/{id}/farmers/{assignmentId}', [GardenController::class, 'updateFarmerAssignment'])->middleware('permission:gardens.manage,ownership.manage');
+        Route::delete('/gardens/{id}/farmers/{assignmentId}', [GardenController::class, 'removeFarmerAssignment'])->middleware('permission:gardens.manage,ownership.manage');
 
         // Owners management
         Route::get('/owners', [OwnerController::class, 'index'])->middleware('permission:ownership.view');
@@ -124,12 +124,12 @@ Route::prefix('v1')->group(function () {
 
         // Durian varieties master data
         Route::get('/durian-varieties', [DurianVarietyController::class, 'index'])->middleware('permission:trees.view');
-        Route::post('/durian-varieties', [DurianVarietyController::class, 'store'])->middleware('permission:trees.manage');
+        Route::post('/durian-varieties', [DurianVarietyController::class, 'store'])->middleware('permission:varieties.manage');
         Route::get('/durian-varieties/{id}', [DurianVarietyController::class, 'show'])->middleware('permission:trees.view');
-        Route::put('/durian-varieties/{id}', [DurianVarietyController::class, 'update'])->middleware('permission:trees.manage');
-        Route::delete('/durian-varieties/{id}', [DurianVarietyController::class, 'destroy'])->middleware('permission:trees.manage');
-        Route::post('/durian-varieties/{id}/photo', [DurianVarietyController::class, 'uploadPhoto'])->middleware('permission:trees.manage');
-        Route::delete('/durian-varieties/{id}/photo', [DurianVarietyController::class, 'deletePhoto'])->middleware('permission:trees.manage');
+        Route::put('/durian-varieties/{id}', [DurianVarietyController::class, 'update'])->middleware('permission:varieties.manage');
+        Route::delete('/durian-varieties/{id}', [DurianVarietyController::class, 'destroy'])->middleware('permission:varieties.manage');
+        Route::post('/durian-varieties/{id}/photo', [DurianVarietyController::class, 'uploadPhoto'])->middleware('permission:varieties.manage');
+        Route::delete('/durian-varieties/{id}/photo', [DurianVarietyController::class, 'deletePhoto'])->middleware('permission:varieties.manage');
 
         // Durian trees, history, photos & QR Code management
         Route::get('/trees/statuses', [TreeController::class, 'statuses'])->middleware('permission:trees.view');

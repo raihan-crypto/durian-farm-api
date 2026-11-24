@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\HarvestRecord;
+use App\Services\TerritoryScopeService;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
@@ -19,7 +20,18 @@ class LatestHarvestRecordsWidget extends TableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn (): Builder => HarvestRecord::query()->with(['tree.variety', 'garden', 'session'])->latest()->limit(10))
+            ->query(function (): Builder {
+                $query = HarvestRecord::query()->with(['tree.variety', 'garden', 'session']);
+                $user = auth()->user();
+                if ($user) {
+                    $accessibleGardenIds = app(TerritoryScopeService::class)->getAccessibleGardenIds($user);
+                    if ($accessibleGardenIds !== null) {
+                        $query->whereIn('garden_id', $accessibleGardenIds);
+                    }
+                }
+
+                return $query->latest()->limit(10);
+            })
             ->columns([
                 TextColumn::make('session.harvest_date')
                     ->label('Tanggal Panen')

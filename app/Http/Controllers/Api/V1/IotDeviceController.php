@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\IotDevice;
 use App\Models\IotTelemetry;
+use App\Models\MonitoringArea;
 use App\Services\TerritoryScopeService;
 use App\Traits\ApiResponse;
 use Illuminate\Database\Eloquent\Builder;
@@ -66,6 +67,11 @@ class IotDeviceController extends Controller
             'description' => ['nullable', 'string'],
         ]);
 
+        $monitoringArea = MonitoringArea::find($validated['monitoring_area_id']);
+        if (! $monitoringArea || ! $this->territoryScope->canAccessGarden($request->user(), $monitoringArea->garden_id)) {
+            return $this->errorResponse('Anda tidak memiliki akses ke area pemantauan ini', 403);
+        }
+
         $validated['status'] = $validated['status'] ?? 'active';
         $device = IotDevice::create($validated);
         $device->load('monitoringArea.garden:id,name');
@@ -90,10 +96,14 @@ class IotDeviceController extends Controller
 
     public function update(Request $request, string $id): JsonResponse
     {
-        $device = IotDevice::find($id);
+        $device = IotDevice::with('monitoringArea')->find($id);
 
         if (! $device) {
             return $this->errorResponse('Perangkat IoT tidak ditemukan', 404);
+        }
+
+        if (! $this->territoryScope->canAccessGarden($request->user(), $device->monitoringArea->garden_id)) {
+            return $this->errorResponse('Anda tidak memiliki akses ke perangkat IoT ini', 403);
         }
 
         $validated = $request->validate([
@@ -106,6 +116,13 @@ class IotDeviceController extends Controller
             'status' => ['sometimes', 'required', Rule::in(['active', 'inactive', 'maintenance', 'offline'])],
             'description' => ['nullable', 'string'],
         ]);
+
+        if ($validated['monitoring_area_id'] !== $device->monitoring_area_id) {
+            $targetArea = MonitoringArea::find($validated['monitoring_area_id']);
+            if (! $targetArea || ! $this->territoryScope->canAccessGarden($request->user(), $targetArea->garden_id)) {
+                return $this->errorResponse('Anda tidak memiliki akses ke area pemantauan tujuan', 403);
+            }
+        }
 
         $device->update($validated);
         $device->load('monitoringArea.garden:id,name');

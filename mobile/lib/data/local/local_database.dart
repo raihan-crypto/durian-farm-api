@@ -163,6 +163,22 @@ class LocalDatabase {
     ''');
   }
 
+  Future<int> getPendingSyncCount() async {
+    final db = await database;
+    final res = await db.rawQuery(
+      "SELECT COUNT(*) as count FROM sync_queue WHERE sync_status IN ('pending', 'failed')",
+    );
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
+  Future<int> getPendingPhotoCount() async {
+    final db = await database;
+    final res = await db.rawQuery(
+      "SELECT COUNT(*) as count FROM photo_queue WHERE sync_status IN ('pending', 'failed')",
+    );
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
   Future<void> clearAllData() async {
     final db = await database;
     const tables = [

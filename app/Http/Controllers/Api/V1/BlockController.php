@@ -85,6 +85,9 @@ class BlockController extends Controller
             $data['approval_status'] = 'pending_addition';
             $data['requested_by'] = $user->id;
         } else {
+            if (! $this->territoryScope->canAccessVillage($user, $data['village_id'])) {
+                return $this->errorResponse('Anda tidak memiliki akses ke desa ini', 403);
+            }
             $data['approval_status'] = $data['approval_status'] ?? 'approved';
         }
 
@@ -154,7 +157,18 @@ class BlockController extends Controller
             return $this->errorResponse('Blok tidak ditemukan', 404);
         }
 
-        $block->update($request->validated());
+        if (! $this->territoryScope->canAccessBlock($request->user(), $block->id)) {
+            return $this->errorResponse('Anda tidak memiliki akses untuk mengubah blok ini', 403);
+        }
+
+        $data = $request->validated();
+        if (isset($data['village_id']) && $data['village_id'] !== $block->village_id) {
+            if (! $this->territoryScope->canAccessVillage($request->user(), $data['village_id'])) {
+                return $this->errorResponse('Anda tidak memiliki akses ke desa tujuan', 403);
+            }
+        }
+
+        $block->update($data);
         $block->load('village')->loadCount(['gardens', 'trees']);
 
         return $this->successResponse(new BlockResource($block), 'Blok berhasil diperbarui');
@@ -169,6 +183,10 @@ class BlockController extends Controller
 
         if (! $block) {
             return $this->errorResponse('Blok tidak ditemukan', 404);
+        }
+
+        if (! $this->territoryScope->canAccessBlock($request->user(), $block->id)) {
+            return $this->errorResponse('Anda tidak memiliki akses untuk menghapus blok ini', 403);
         }
 
         if ($block->gardens()->exists()) {
@@ -201,6 +219,11 @@ class BlockController extends Controller
      */
     public function approve(Request $request, string $id): JsonResponse
     {
+        $user = $request->user();
+        if (! $user || (! $user->hasRole('super_admin') && ! $user->hasRole('admin'))) {
+            return $this->errorResponse('Hanya administrator yang dapat menyetujui atau menolak permohonan blok', 403);
+        }
+
         $block = Block::find($id);
 
         if (! $block) {
@@ -225,6 +248,11 @@ class BlockController extends Controller
      */
     public function reject(Request $request, string $id): JsonResponse
     {
+        $user = $request->user();
+        if (! $user || (! $user->hasRole('super_admin') && ! $user->hasRole('admin'))) {
+            return $this->errorResponse('Hanya administrator yang dapat menyetujui atau menolak permohonan blok', 403);
+        }
+
         $block = Block::find($id);
 
         if (! $block) {
@@ -289,6 +317,10 @@ class BlockController extends Controller
             return $this->errorResponse('Blok tidak ditemukan', 404);
         }
 
+        if (! $this->territoryScope->canAccessBlock($request->user(), $block->id)) {
+            return $this->errorResponse('Anda tidak memiliki akses ke blok ini', 403);
+        }
+
         $data = $request->validated();
         $assignmentDate = $data['assignment_date'] ?? Carbon::today()->toDateString();
 
@@ -329,6 +361,10 @@ class BlockController extends Controller
 
         if (! $assignment) {
             return $this->errorResponse('Penugasan petani pada blok tidak ditemukan', 404);
+        }
+
+        if (! $this->territoryScope->canAccessBlock($request->user(), $id)) {
+            return $this->errorResponse('Anda tidak memiliki akses ke blok ini', 403);
         }
 
         $data = $request->validated();
@@ -372,7 +408,7 @@ class BlockController extends Controller
     /**
      * Remove a farmer assignment from a block.
      */
-    public function removeFarmerAssignment(string $id, string $assignmentId): JsonResponse
+    public function removeFarmerAssignment(Request $request, string $id, string $assignmentId): JsonResponse
     {
         $assignment = BlockFarmer::query()
             ->where('block_id', $id)
@@ -380,6 +416,10 @@ class BlockController extends Controller
 
         if (! $assignment) {
             return $this->errorResponse('Penugasan petani pada blok tidak ditemukan', 404);
+        }
+
+        if (! $this->territoryScope->canAccessBlock($request->user(), $id)) {
+            return $this->errorResponse('Anda tidak memiliki akses ke blok ini', 403);
         }
 
         $assignment->delete();

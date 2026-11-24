@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Farmers;
 
 use App\Filament\Resources\Farmers\Pages\ManageFarmers;
 use App\Models\Farmer;
+use App\Services\TerritoryScopeService;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -16,6 +17,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
@@ -91,6 +93,23 @@ class FarmerResource extends Resource
                 EditAction::make(),
                 DeleteAction::make(),
             ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        if ($user && ! $user->hasRole('super_admin') && ! $user->hasRole('admin')) {
+            $accessibleGardenIds = app(TerritoryScopeService::class)->getAccessibleGardenIds($user);
+            if ($accessibleGardenIds !== null) {
+                $query->whereHas('gardens', function ($q) use ($accessibleGardenIds) {
+                    $q->whereIn('gardens.id', $accessibleGardenIds);
+                });
+            }
+        }
+
+        return $query;
     }
 
     public static function getPages(): array

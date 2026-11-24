@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('durian:sync-weather')->hourly()->withoutOverlapping();
 Schedule::command('durian:prune-soft-deleted')->daily();
+Schedule::command('sanctum:prune-expired --hours=24')->daily();

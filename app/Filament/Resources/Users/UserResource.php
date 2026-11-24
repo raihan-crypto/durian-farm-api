@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Users;
 
 use App\Filament\Resources\Users\Pages\ManageUsers;
 use App\Models\User;
+use App\Services\RoleHierarchyService;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -54,7 +55,16 @@ class UserResource extends Resource
 
     public static function canEdit(Model $record): bool
     {
-        return (bool) auth()->user()?->hasPermission('users.manage');
+        $actor = auth()->user();
+        if (! $actor || ! $actor->hasPermission('users.manage')) {
+            return false;
+        }
+
+        if ($record instanceof User) {
+            return app(RoleHierarchyService::class)->canModifyTargetUser($actor, $record);
+        }
+
+        return true;
     }
 
     public static function canDelete(Model $record): bool
@@ -80,7 +90,34 @@ class UserResource extends Resource
                 ->dehydrateStateUsing(fn (?string $state) => filled($state) ? Hash::make($state) : null)
                 ->dehydrated(fn (?string $state) => filled($state))
                 ->required(fn (string $operation): bool => $operation === 'create'),
-            Select::make('roles')->label('Role')->relationship('roles', 'name')->multiple()->preload(),
+            Select::make('roles')
+                ->label('Role')
+                ->relationship(
+                    'roles',
+                    'name',
+                    modifyQueryUsing: fn (Builder $query) => app(RoleHierarchyService::class)->scopeAssignableRoles($query, auth()->user())
+                )
+                ->multiple()
+                ->preload()
+                ->disabled(fn (?User $record): bool => $record !== null
+                    && auth()->user() !== null
+                    && ! app(RoleHierarchyService::class)->isSuperAdmin(auth()->user())
+                    && auth()->user()->id === $record->id)
+                ->rules([
+                    fn (?User $record) => function (string $attribute, mixed $value, \Closure $fail) use ($record): void {
+                        $actor = auth()->user();
+                        if (! $actor) {
+                            $fail('Pengguna tidak terautentikasi.');
+
+                            return;
+                        }
+
+                        $roleIds = is_array($value) ? array_values(array_map('strval', $value)) : [];
+                        if (! app(RoleHierarchyService::class)->canAssignRoles($actor, $record, $roleIds)) {
+                            $fail('Anda tidak memiliki izin untuk mengubah atau menetapkan role yang dilindungi.');
+                        }
+                    },
+                ]),
             Select::make('village_id')
                 ->label('Desa Terikat')
                 ->relationship('village', 'name')

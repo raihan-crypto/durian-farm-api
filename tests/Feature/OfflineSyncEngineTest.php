@@ -351,4 +351,98 @@ class OfflineSyncEngineTest extends TestCase
         $changesResp->assertStatus(200)
             ->assertJsonCount(1, 'data.changes.trees');
     }
+
+    public function test_delta_pull_includes_consistent_qr_token_for_trees(): void
+    {
+        $qr = app(TreeQrCodeService::class)->ensureForTree($this->treeA);
+        $this->treeA->touch();
+
+        $resp = $this->withHeader('Authorization', 'Bearer '.$this->farmerToken)
+            ->postJson('/api/v1/sync/pull', [
+                'entities' => ['trees'],
+            ]);
+
+        $resp->assertStatus(200);
+        $trees = $resp->json('data.changes.trees');
+        $treeRecord = collect($trees)->firstWhere('id', $this->treeA->id);
+
+        $this->assertNotNull($treeRecord);
+        $this->assertSame($qr->public_token, $treeRecord['qr_token']);
+    }
+
+    public function test_pull_request_with_invalid_base64_cursor_returns_422(): void
+    {
+        $resp = $this->withHeader('Authorization', 'Bearer '.$this->farmerToken)
+            ->postJson('/api/v1/sync/pull', [
+                'cursor' => '!!!not-valid-base64???',
+            ]);
+
+        $resp->assertStatus(422)
+            ->assertJsonValidationErrors(['cursor']);
+    }
+
+    public function test_pull_request_with_cursor_missing_snapshot_time_returns_422(): void
+    {
+        $badCursor = base64_encode(json_encode(['foo' => 'bar']));
+
+        $resp = $this->withHeader('Authorization', 'Bearer '.$this->farmerToken)
+            ->postJson('/api/v1/sync/pull', [
+                'cursor' => $badCursor,
+            ]);
+
+        $resp->assertStatus(422)
+            ->assertJsonValidationErrors(['cursor']);
+    }
+
+    public function test_pull_request_with_garbage_snapshot_time_returns_422(): void
+    {
+        $badCursor = base64_encode(json_encode(['snapshot_time' => 'bukan-format-tanggal']));
+
+        $resp = $this->withHeader('Authorization', 'Bearer '.$this->farmerToken)
+            ->postJson('/api/v1/sync/pull', [
+                'cursor' => $badCursor,
+            ]);
+
+        $resp->assertStatus(422)
+            ->assertJsonValidationErrors(['cursor']);
+    }
+
+    public function test_pull_request_with_absurd_future_year_returns_422(): void
+    {
+        $badCursor = base64_encode(json_encode(['snapshot_time' => '9999-12-31T23:59:59Z']));
+
+        $resp = $this->withHeader('Authorization', 'Bearer '.$this->farmerToken)
+            ->postJson('/api/v1/sync/pull', [
+                'cursor' => $badCursor,
+            ]);
+
+        $resp->assertStatus(422)
+            ->assertJsonValidationErrors(['cursor']);
+    }
+
+    public function test_pull_request_with_valid_cursor_returns_200_with_normal_pagination(): void
+    {
+        $validCursor = base64_encode(json_encode([
+            'snapshot_time' => Carbon::now()->subMinutes(1)->toISOString(),
+            'entities' => [],
+            'tombstones' => [],
+        ]));
+
+        $resp = $this->withHeader('Authorization', 'Bearer '.$this->farmerToken)
+            ->postJson('/api/v1/sync/pull', [
+                'cursor' => $validCursor,
+            ]);
+
+        $resp->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => [
+                    'server_time',
+                    'changes',
+                    'next_cursor',
+                    'has_more',
+                ],
+            ]);
+    }
 }

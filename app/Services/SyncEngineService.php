@@ -22,11 +22,14 @@ use App\Models\Tree;
 use App\Models\TreeMeasurement;
 use App\Models\User;
 use App\Models\Village;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class SyncEngineService
 {
@@ -208,125 +211,409 @@ class SyncEngineService
     }
 
     /**
-     * Return incremental server changes updated/created after $since.
+     * Return incremental server changes updated/created after $since with deterministic cursor pagination
+     * and soft-delete tombstones.
      *
      * @param  array<int, string>|null  $entities
      * @return array<string, mixed>
      */
-    public function pullChanges(User $user, ?string $since = null, ?array $entities = null, int $limit = 200): array
-    {
-        $serverTime = now()->toISOString();
-        $sinceCarbon = $since ? Carbon::parse($since) : null;
-        $requested = empty($entities) ? self::PULLABLE_ENTITIES : array_values(array_intersect(self::PULLABLE_ENTITIES, $entities));
+    public function pullChanges(
+        User $user,
+        ?string $since = null,
+        ?array $entities = null,
+        int $limit = 200,
+        ?string $cursor = null,
+    ): array {
+        $appTimezone = (string) config('app.timezone', 'UTC');
+        $limit = min(max($limit, 1), 500);
+        $decodedCursor = $this->decodePullCursor($cursor);
+
+        $snapshotCarbon = isset($decodedCursor['snapshot_time'])
+            ? Carbon::parse((string) $decodedCursor['snapshot_time'])->setTimezone($appTimezone)
+            : Carbon::now($appTimezone);
+        $serverTime = $snapshotCarbon->toISOString();
+
+        $sinceCarbon = $since
+            ? Carbon::parse($since)->setTimezone($appTimezone)
+            : null;
+        $requested = empty($entities)
+            ? self::PULLABLE_ENTITIES
+            : array_values(array_intersect(self::PULLABLE_ENTITIES, $entities));
 
         $accessibleVillageIds = $this->territoryScope->getAccessibleVillageIds($user);
         $accessibleBlockIds = $this->territoryScope->getAccessibleBlockIds($user);
         $accessibleGardenIds = $this->territoryScope->getAccessibleGardenIds($user);
 
         $changes = [];
+        $tombstones = [];
+        $deletedIds = [];
+        $nextCursorState = [
+            'snapshot_time' => $serverTime,
+            'entities' => [],
+            'tombstones' => [],
+        ];
+        $hasMore = false;
 
         foreach ($requested as $entity) {
-            $changes[$entity] = match ($entity) {
-                'villages' => Village::query()
-                    ->when($accessibleVillageIds !== null, fn ($q) => $q->whereIn('id', $accessibleVillageIds))
-                    ->when($sinceCarbon, fn ($q) => $q->where('updated_at', '>', $sinceCarbon))
-                    ->orderBy('updated_at')
-                    ->limit($limit)
-                    ->get(),
-                'blocks' => Block::query()
-                    ->when($accessibleBlockIds !== null, fn ($q) => $q->whereIn('id', $accessibleBlockIds))
-                    ->when($sinceCarbon, fn ($q) => $q->where('updated_at', '>', $sinceCarbon))
-                    ->orderBy('updated_at')
-                    ->limit($limit)
-                    ->get(),
-                'gardens' => Garden::query()
-                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('id', $accessibleGardenIds))
-                    ->when($sinceCarbon, fn ($q) => $q->where('updated_at', '>', $sinceCarbon))
-                    ->orderBy('updated_at')
-                    ->limit($limit)
-                    ->get(),
-                'durian_varieties' => DurianVariety::query()
-                    ->when($sinceCarbon, fn ($q) => $q->where('updated_at', '>', $sinceCarbon))
-                    ->orderBy('updated_at')
-                    ->limit($limit)
-                    ->get(),
-                'product_categories' => ProductCategory::query()
-                    ->when($sinceCarbon, fn ($q) => $q->where('updated_at', '>', $sinceCarbon))
-                    ->orderBy('updated_at')
-                    ->limit($limit)
-                    ->get(),
-                'agricultural_products' => AgriculturalProduct::query()
-                    ->when($sinceCarbon, fn ($q) => $q->where('updated_at', '>', $sinceCarbon))
-                    ->orderBy('updated_at')
-                    ->limit($limit)
-                    ->get(),
-                'trees' => Tree::query()
-                    ->with('qrCode:id,tree_id,public_token,is_active')
-                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('garden_id', $accessibleGardenIds))
-                    ->when($sinceCarbon, fn ($q) => $q->where('updated_at', '>', $sinceCarbon))
-                    ->orderBy('updated_at')
-                    ->limit($limit)
-                    ->get(),
-                'harvest_seasons' => HarvestSeason::query()
-                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('garden_id', $accessibleGardenIds))
-                    ->when($sinceCarbon, fn ($q) => $q->where('updated_at', '>', $sinceCarbon))
-                    ->orderBy('updated_at')
-                    ->limit($limit)
-                    ->get(),
-                'harvest_sessions' => HarvestSession::query()
-                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('garden_id', $accessibleGardenIds))
-                    ->when($sinceCarbon, fn ($q) => $q->where('updated_at', '>', $sinceCarbon))
-                    ->orderBy('updated_at')
-                    ->limit($limit)
-                    ->get(),
-                'tree_measurements' => TreeMeasurement::query()
-                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->whereIn('garden_id', $accessibleGardenIds)))
-                    ->when($sinceCarbon, fn ($q) => $q->where('created_at', '>', $sinceCarbon))
-                    ->orderBy('created_at')
-                    ->limit($limit)
-                    ->get(),
-                'fertilization_records' => FertilizationRecord::query()
-                    ->with('items')
-                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->whereIn('garden_id', $accessibleGardenIds)))
-                    ->when($sinceCarbon, fn ($q) => $q->where('updated_at', '>', $sinceCarbon))
-                    ->orderBy('updated_at')
-                    ->limit($limit)
-                    ->get(),
-                'spraying_records' => SprayingRecord::query()
-                    ->with('items')
-                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->whereIn('garden_id', $accessibleGardenIds)))
-                    ->when($sinceCarbon, fn ($q) => $q->where('updated_at', '>', $sinceCarbon))
-                    ->orderBy('updated_at')
-                    ->limit($limit)
-                    ->get(),
-                'flowering_records' => FloweringRecord::query()
-                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->whereIn('garden_id', $accessibleGardenIds)))
-                    ->when($sinceCarbon, fn ($q) => $q->where('created_at', '>', $sinceCarbon))
-                    ->orderBy('created_at')
-                    ->limit($limit)
-                    ->get(),
-                'fruit_development_records' => FruitDevelopmentRecord::query()
-                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->whereIn('garden_id', $accessibleGardenIds)))
-                    ->when($sinceCarbon, fn ($q) => $q->where('created_at', '>', $sinceCarbon))
-                    ->orderBy('created_at')
-                    ->limit($limit)
-                    ->get(),
-                'harvest_records' => HarvestRecord::query()
-                    ->with('details')
-                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('garden_id', $accessibleGardenIds))
-                    ->when($sinceCarbon, fn ($q) => $q->where('updated_at', '>', $sinceCarbon))
-                    ->orderBy('updated_at')
-                    ->limit($limit)
-                    ->get(),
-                default => collect(),
-            };
+            [$baseQuery, $timestampColumn] = $this->buildPullEntityQuery(
+                $entity,
+                $accessibleVillageIds,
+                $accessibleBlockIds,
+                $accessibleGardenIds
+            );
+
+            if ($baseQuery === null) {
+                $changes[$entity] = collect();
+                $tombstones[$entity] = [];
+                $deletedIds[$entity] = [];
+
+                continue;
+            }
+
+            // 1. Active changed records (deterministic order: timestamp ASC, id ASC)
+            $entityCursor = $decodedCursor['entities'][$entity] ?? null;
+            if ($entityCursor === 'done') {
+                $changes[$entity] = collect();
+                $nextCursorState['entities'][$entity] = 'done';
+            } else {
+                $activeQuery = clone $baseQuery;
+                $this->applyDeltaWindow(
+                    $activeQuery,
+                    $timestampColumn,
+                    $sinceCarbon,
+                    $snapshotCarbon,
+                    is_array($entityCursor) ? $entityCursor : null
+                );
+
+                $rows = $activeQuery
+                    ->orderBy($timestampColumn, 'asc')
+                    ->orderBy('id', 'asc')
+                    ->limit($limit + 1)
+                    ->get();
+
+                if ($rows->count() > $limit) {
+                    $hasMore = true;
+                    $rows = $rows->slice(0, $limit)->values();
+                    $lastRow = $rows->last();
+                    $lastTs = $lastRow?->getAttribute($timestampColumn);
+                    $nextCursorState['entities'][$entity] = [
+                        'ts' => $lastTs instanceof Carbon
+                            ? $lastTs->copy()->setTimezone($appTimezone)->format('Y-m-d H:i:s')
+                            : (string) $lastTs,
+                        'id' => (string) $lastRow?->getKey(),
+                    ];
+                } else {
+                    $nextCursorState['entities'][$entity] = 'done';
+                }
+
+                if ($entity === 'trees') {
+                    $rows = $rows->map(function (Tree $tree): Tree {
+                        $tree->setAttribute(
+                            'qr_token',
+                            $tree->qrCode?->is_active ? $tree->qrCode->public_token : null
+                        );
+
+                        return $tree;
+                    });
+                }
+
+                $changes[$entity] = $rows;
+            }
+
+            // 2. Soft-delete tombstones (deterministic order: deleted_at ASC, id ASC)
+            $tombstoneCursor = $decodedCursor['tombstones'][$entity] ?? null;
+            if ($tombstoneCursor === 'done') {
+                $tombstones[$entity] = [];
+                $deletedIds[$entity] = [];
+                $nextCursorState['tombstones'][$entity] = 'done';
+            } else {
+                $tombstoneQuery = $this->buildPullTombstoneQuery(
+                    $entity,
+                    $accessibleVillageIds,
+                    $accessibleBlockIds,
+                    $accessibleGardenIds
+                );
+
+                if ($tombstoneQuery === null) {
+                    $tombstones[$entity] = [];
+                    $deletedIds[$entity] = [];
+                    $nextCursorState['tombstones'][$entity] = 'done';
+                } else {
+                    $this->applyDeltaWindow(
+                        $tombstoneQuery,
+                        'deleted_at',
+                        $sinceCarbon,
+                        $snapshotCarbon,
+                        is_array($tombstoneCursor) ? $tombstoneCursor : null
+                    );
+
+                    $deletedRows = $tombstoneQuery
+                        ->orderBy('deleted_at', 'asc')
+                        ->orderBy('id', 'asc')
+                        ->limit($limit + 1)
+                        ->get(['id', 'deleted_at']);
+
+                    if ($deletedRows->count() > $limit) {
+                        $hasMore = true;
+                        $deletedRows = $deletedRows->slice(0, $limit)->values();
+                        $lastDeleted = $deletedRows->last();
+                        $lastDeletedAt = $lastDeleted?->getAttribute('deleted_at');
+                        $nextCursorState['tombstones'][$entity] = [
+                            'ts' => $lastDeletedAt instanceof Carbon
+                                ? $lastDeletedAt->copy()->setTimezone($appTimezone)->format('Y-m-d H:i:s')
+                                : (string) $lastDeletedAt,
+                            'id' => (string) $lastDeleted?->getKey(),
+                        ];
+                    } else {
+                        $nextCursorState['tombstones'][$entity] = 'done';
+                    }
+
+                    $tombstones[$entity] = $deletedRows
+                        ->map(fn ($row) => [
+                            'id' => (string) $row->getKey(),
+                            'deleted_at' => $row->deleted_at?->toISOString(),
+                        ])
+                        ->values()
+                        ->all();
+                    $deletedIds[$entity] = $deletedRows
+                        ->map(fn ($row) => (string) $row->getKey())
+                        ->values()
+                        ->all();
+                }
+            }
         }
 
         return [
             'server_time' => $serverTime,
+            'snapshot_time' => $serverTime,
             'since' => $sinceCarbon?->toISOString(),
             'changes' => $changes,
+            'tombstones' => $tombstones,
+            'deleted_ids' => $deletedIds,
+            'has_more' => $hasMore,
+            'next_cursor' => $hasMore ? $this->encodePullCursor($nextCursorState) : null,
         ];
+    }
+
+    /**
+     * Build the scoped active query and delta timestamp column for a pullable entity.
+     *
+     * @param  array<int, string>|null  $accessibleVillageIds
+     * @param  array<int, string>|null  $accessibleBlockIds
+     * @param  array<int, string>|null  $accessibleGardenIds
+     * @return array{0: Builder<Model>|null, 1: string}
+     */
+    protected function buildPullEntityQuery(
+        string $entity,
+        ?array $accessibleVillageIds,
+        ?array $accessibleBlockIds,
+        ?array $accessibleGardenIds,
+    ): array {
+        return match ($entity) {
+            'villages' => [
+                Village::query()->when($accessibleVillageIds !== null, fn ($q) => $q->whereIn('id', $accessibleVillageIds)),
+                'updated_at',
+            ],
+            'blocks' => [
+                Block::query()->when($accessibleBlockIds !== null, fn ($q) => $q->whereIn('id', $accessibleBlockIds)),
+                'updated_at',
+            ],
+            'gardens' => [
+                Garden::query()->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('id', $accessibleGardenIds)),
+                'updated_at',
+            ],
+            'durian_varieties' => [DurianVariety::query(), 'updated_at'],
+            'product_categories' => [ProductCategory::query(), 'updated_at'],
+            'agricultural_products' => [AgriculturalProduct::query(), 'updated_at'],
+            'trees' => [
+                Tree::query()
+                    ->with('qrCode:id,tree_id,public_token,is_active')
+                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('garden_id', $accessibleGardenIds)),
+                'updated_at',
+            ],
+            'harvest_seasons' => [
+                HarvestSeason::query()->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('garden_id', $accessibleGardenIds)),
+                'updated_at',
+            ],
+            'harvest_sessions' => [
+                HarvestSession::query()->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('garden_id', $accessibleGardenIds)),
+                'updated_at',
+            ],
+            'tree_measurements' => [
+                TreeMeasurement::query()->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->whereIn('garden_id', $accessibleGardenIds))),
+                'created_at',
+            ],
+            'fertilization_records' => [
+                FertilizationRecord::query()
+                    ->with('items')
+                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->whereIn('garden_id', $accessibleGardenIds))),
+                'updated_at',
+            ],
+            'spraying_records' => [
+                SprayingRecord::query()
+                    ->with('items')
+                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->whereIn('garden_id', $accessibleGardenIds))),
+                'updated_at',
+            ],
+            'flowering_records' => [
+                FloweringRecord::query()->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->whereIn('garden_id', $accessibleGardenIds))),
+                'created_at',
+            ],
+            'fruit_development_records' => [
+                FruitDevelopmentRecord::query()->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->whereIn('garden_id', $accessibleGardenIds))),
+                'created_at',
+            ],
+            'harvest_records' => [
+                HarvestRecord::query()
+                    ->with('details')
+                    ->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('garden_id', $accessibleGardenIds)),
+                'updated_at',
+            ],
+            default => [null, 'updated_at'],
+        };
+    }
+
+    /**
+     * Build the scoped soft-deleted tombstone query for a pullable entity.
+     *
+     * @param  array<int, string>|null  $accessibleVillageIds
+     * @param  array<int, string>|null  $accessibleBlockIds
+     * @param  array<int, string>|null  $accessibleGardenIds
+     * @return Builder<Model>|null
+     */
+    protected function buildPullTombstoneQuery(
+        string $entity,
+        ?array $accessibleVillageIds,
+        ?array $accessibleBlockIds,
+        ?array $accessibleGardenIds,
+    ): ?Builder {
+        return match ($entity) {
+            'villages' => Village::onlyTrashed()->when($accessibleVillageIds !== null, fn ($q) => $q->whereIn('id', $accessibleVillageIds)),
+            'blocks' => Block::onlyTrashed()->when($accessibleBlockIds !== null, fn ($q) => $q->whereIn('id', $accessibleBlockIds)),
+            'gardens' => Garden::onlyTrashed()->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('id', $accessibleGardenIds)),
+            'durian_varieties' => DurianVariety::onlyTrashed(),
+            'product_categories' => ProductCategory::onlyTrashed(),
+            'agricultural_products' => AgriculturalProduct::onlyTrashed(),
+            'trees' => Tree::onlyTrashed()->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('garden_id', $accessibleGardenIds)),
+            'harvest_seasons' => HarvestSeason::onlyTrashed()->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('garden_id', $accessibleGardenIds)),
+            'harvest_sessions' => HarvestSession::onlyTrashed()->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('garden_id', $accessibleGardenIds)),
+            'tree_measurements' => TreeMeasurement::onlyTrashed()->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->withTrashed()->whereIn('garden_id', $accessibleGardenIds))),
+            'fertilization_records' => FertilizationRecord::onlyTrashed()->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->withTrashed()->whereIn('garden_id', $accessibleGardenIds))),
+            'spraying_records' => SprayingRecord::onlyTrashed()->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->withTrashed()->whereIn('garden_id', $accessibleGardenIds))),
+            'flowering_records' => FloweringRecord::onlyTrashed()->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->withTrashed()->whereIn('garden_id', $accessibleGardenIds))),
+            'fruit_development_records' => FruitDevelopmentRecord::onlyTrashed()->when($accessibleGardenIds !== null, fn ($q) => $q->whereHas('tree', fn ($t) => $t->withTrashed()->whereIn('garden_id', $accessibleGardenIds))),
+            'harvest_records' => HarvestRecord::onlyTrashed()->when($accessibleGardenIds !== null, fn ($q) => $q->whereIn('garden_id', $accessibleGardenIds)),
+            default => null,
+        };
+    }
+
+    /**
+     * Apply deterministic (timestamp, id) cursor bounds and snapshot upper bound.
+     *
+     * @param  Builder<Model>  $query
+     * @param  array{ts?: string, id?: string}|null  $cursorPosition
+     */
+    protected function applyDeltaWindow(
+        Builder $query,
+        string $timestampColumn,
+        ?Carbon $sinceCarbon,
+        Carbon $snapshotCarbon,
+        ?array $cursorPosition,
+    ): void {
+        $shouldClampUpperBound = $cursorPosition !== null
+            || $sinceCarbon === null
+            || $sinceCarbon->lte($snapshotCarbon);
+
+        if ($shouldClampUpperBound) {
+            $query->where($timestampColumn, '<=', $snapshotCarbon);
+        }
+
+        if ($cursorPosition !== null && isset($cursorPosition['ts'], $cursorPosition['id'])) {
+            $cursorTs = $cursorPosition['ts'];
+            $cursorId = $cursorPosition['id'];
+
+            $query->where(function ($q) use ($timestampColumn, $cursorTs, $cursorId): void {
+                $q->where($timestampColumn, '>', $cursorTs)
+                    ->orWhere(function ($tie) use ($timestampColumn, $cursorTs, $cursorId): void {
+                        $tie->where($timestampColumn, '=', $cursorTs)
+                            ->where('id', '>', $cursorId);
+                    });
+            });
+        } elseif ($sinceCarbon !== null) {
+            $query->where($timestampColumn, '>', $sinceCarbon);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $state
+     */
+    protected function encodePullCursor(array $state): string
+    {
+        return rtrim(strtr(base64_encode((string) json_encode($state)), '+/', '-_'), '=');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function decodePullCursor(?string $cursor): array
+    {
+        if ($cursor === null || trim($cursor) === '') {
+            return [];
+        }
+
+        $padded = strtr($cursor, '-_', '+/');
+        $remainder = strlen($padded) % 4;
+        if ($remainder !== 0) {
+            $padded .= str_repeat('=', 4 - $remainder);
+        }
+
+        $decoded = base64_decode($padded, true);
+        if ($decoded === false) {
+            throw ValidationException::withMessages([
+                'cursor' => 'Cursor sinkronisasi tidak valid atau korup.',
+            ]);
+        }
+
+        $parsed = json_decode($decoded, true);
+        if (! is_array($parsed)) {
+            throw ValidationException::withMessages([
+                'cursor' => 'Cursor sinkronisasi tidak valid atau korup.',
+            ]);
+        }
+
+        if (empty($parsed['snapshot_time']) || ! is_string($parsed['snapshot_time'])) {
+            throw ValidationException::withMessages([
+                'cursor' => 'Cursor sinkronisasi tidak valid atau korup: snapshot_time tidak ditemukan.',
+            ]);
+        }
+
+        try {
+            $carbon = Carbon::parse($parsed['snapshot_time']);
+        } catch (\Throwable $e) {
+            throw ValidationException::withMessages([
+                'cursor' => 'Cursor sinkronisasi tidak valid atau korup: format tanggal snapshot_time tidak valid.',
+            ]);
+        }
+
+        if ($carbon->year < 2000 || $carbon->year > 2100) {
+            throw ValidationException::withMessages([
+                'cursor' => 'Cursor sinkronisasi tidak valid atau korup: tahun snapshot_time di luar batas wajar.',
+            ]);
+        }
+
+        if (isset($parsed['entities']) && ! is_array($parsed['entities'])) {
+            throw ValidationException::withMessages([
+                'cursor' => 'Cursor sinkronisasi tidak valid atau korup: format entities tidak valid.',
+            ]);
+        }
+
+        if (isset($parsed['tombstones']) && ! is_array($parsed['tombstones'])) {
+            throw ValidationException::withMessages([
+                'cursor' => 'Cursor sinkronisasi tidak valid atau korup: format tombstones tidak valid.',
+            ]);
+        }
+
+        return $parsed;
     }
 
     /**

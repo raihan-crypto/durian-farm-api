@@ -30,6 +30,7 @@ use App\Services\PhotoStorageService;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class PruneSoftDeletedRecordsCommand extends Command
@@ -39,7 +40,9 @@ class PruneSoftDeletedRecordsCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'durian:prune-soft-deleted {--days=30 : Number of days retention for soft deleted records}';
+    protected $signature = 'durian:prune-soft-deleted
+                            {--days=30 : Number of days retention for soft deleted records}
+                            {--dry-run : Simulate pruning and report eligible and skipped records without deleting}';
 
     /**
      * The console command description.
@@ -85,10 +88,12 @@ class PruneSoftDeletedRecordsCommand extends Command
      */
     public function handle(PhotoStorageService $photoStorage): int
     {
-        $days = (int) $this->option('days');
+        $days = max((int) $this->option('days'), 0);
+        $isDryRun = (bool) $this->option('dry-run');
         $cutoffDate = Carbon::now()->subDays($days);
 
-        $this->info("Pruning records soft-deleted on or before {$cutoffDate->toDateTimeString()} ({$days} days retention)...");
+        $modeLabel = $isDryRun ? '[DRY RUN] ' : '';
+        $this->info("{$modeLabel}Pruning records soft-deleted on or before {$cutoffDate->toDateTimeString()} ({$days} days retention)...");
 
         $totalPruned = 0;
         $totalSkipped = 0;
@@ -106,44 +111,58 @@ class PruneSoftDeletedRecordsCommand extends Command
             $skippedForModel = 0;
 
             // Process records in chunks to prevent memory spikes on large tables
-            $query->chunkById(100, function ($records) use ($modelClass, $photoStorage, $days, &$prunedForModel, &$skippedForModel, &$totalErrors) {
+            $query->chunkById(100, function ($records) use ($modelClass, $photoStorage, $days, $isDryRun, &$prunedForModel, &$skippedForModel, &$totalErrors) {
                 foreach ($records as $record) {
-                    // 1. Prevent deleting parent entities when active child dependencies remain
+                    // 1. Prevent deleting parent entities when active or historical child dependencies remain
                     if ($this->hasActiveDependencies($record)) {
                         $skippedForModel++;
 
                         continue;
                     }
 
-                    try {
-                        // 2. Snapshot record in AuditLog before permanent force-delete
-                        AuditLog::create([
-                            'user_id' => null, // Pruned by automated scheduled system console
-                            'action' => 'pruned',
-                            'table_name' => $record->getTable(),
-                            'record_id' => (string) $record->getKey(),
-                            'old_values' => $record->getAttributes(),
-                            'new_values' => [
-                                'pruned_by' => 'durian:prune-soft-deleted',
-                                'retention_days' => $days,
-                                'deleted_at' => (string) $record->deleted_at,
-                            ],
-                            'ip_address' => '127.0.0.1',
-                            'user_agent' => 'Console/Artisan',
-                        ]);
+                    if ($isDryRun) {
+                        $prunedForModel++;
 
-                        // 3. Clean up physical media if ActivityPhoto
+                        continue;
+                    }
+
+                    try {
+                        $mediaPathsToDelete = [];
                         if ($record instanceof ActivityPhoto) {
                             if ($record->file_path) {
-                                $photoStorage->deleteFile($record->file_path);
+                                $mediaPathsToDelete[] = $record->file_path;
                             }
                             if ($record->thumbnail_path) {
-                                $photoStorage->deleteFile($record->thumbnail_path);
+                                $mediaPathsToDelete[] = $record->thumbnail_path;
                             }
                         }
 
-                        // 4. Force delete individual model instance (fires model events)
-                        $record->forceDelete();
+                        DB::transaction(function () use ($record, $days): void {
+                            // 2. Snapshot record in AuditLog before permanent force-delete
+                            AuditLog::create([
+                                'user_id' => null, // Pruned by automated scheduled system console
+                                'action' => 'pruned',
+                                'table_name' => $record->getTable(),
+                                'record_id' => (string) $record->getKey(),
+                                'old_values' => $record->getAttributes(),
+                                'new_values' => [
+                                    'pruned_by' => 'durian:prune-soft-deleted',
+                                    'retention_days' => $days,
+                                    'deleted_at' => (string) $record->deleted_at,
+                                ],
+                                'ip_address' => '127.0.0.1',
+                                'user_agent' => 'Console/Artisan',
+                            ]);
+
+                            // 3. Force delete individual model instance (fires model events)
+                            $record->forceDelete();
+                        });
+
+                        // 4. Clean up physical media only after database commit succeeds
+                        foreach ($mediaPathsToDelete as $path) {
+                            $photoStorage->deleteFile($path);
+                        }
+
                         $prunedForModel++;
                     } catch (Throwable $e) {
                         $totalErrors++;
@@ -152,12 +171,15 @@ class PruneSoftDeletedRecordsCommand extends Command
                 }
             });
 
-            $this->line(" - {$modelClass}: {$prunedForModel} pruned, {$skippedForModel} skipped (has dependencies).");
+            $verb = $isDryRun ? 'would prune' : 'pruned';
+            $skipVerb = $isDryRun ? 'would skip' : 'skipped';
+            $this->line(" - {$modelClass}: {$prunedForModel} {$verb}, {$skippedForModel} {$skipVerb} (has dependencies).");
             $totalPruned += $prunedForModel;
             $totalSkipped += $skippedForModel;
         }
 
-        $this->info("Pruning completed. Total pruned: {$totalPruned}, Total skipped: {$totalSkipped}, Errors: {$totalErrors}");
+        $summaryVerb = $isDryRun ? 'Total eligible' : 'Total pruned';
+        $this->info("{$modeLabel}Pruning completed. {$summaryVerb}: {$totalPruned}, Total skipped: {$totalSkipped}, Errors: {$totalErrors}");
 
         return Command::SUCCESS;
     }
@@ -176,11 +198,23 @@ class PruneSoftDeletedRecordsCommand extends Command
         }
 
         if ($record instanceof Garden) {
-            return $record->trees()->withTrashed()->exists() || $record->harvestSessions()->withTrashed()->exists();
+            return $record->trees()->withTrashed()->exists()
+                || $record->harvestSeasons()->withTrashed()->exists()
+                || $record->harvestSessions()->withTrashed()->exists()
+                || $record->harvestRecords()->withTrashed()->exists()
+                || $record->monitoringAreas()->exists()
+                || $record->gardenOwners()->exists()
+                || $record->gardenFarmers()->exists();
         }
 
         if ($record instanceof Tree) {
-            return $record->measurements()->exists() || $record->harvestRecords()->exists() || $record->photos()->exists();
+            return $record->measurements()->withTrashed()->exists()
+                || $record->harvestRecords()->withTrashed()->exists()
+                || $record->photos()->withTrashed()->exists()
+                || $record->fertilizationRecords()->withTrashed()->exists()
+                || $record->sprayingRecords()->withTrashed()->exists()
+                || $record->floweringRecords()->withTrashed()->exists()
+                || $record->fruitDevelopmentRecords()->withTrashed()->exists();
         }
 
         if ($record instanceof ProductCategory) {
@@ -188,7 +222,8 @@ class PruneSoftDeletedRecordsCommand extends Command
         }
 
         if ($record instanceof AgriculturalProduct) {
-            return $record->fertilizationItems()->exists() || $record->sprayingItems()->exists();
+            return $record->fertilizationItems()->withTrashed()->exists()
+                || $record->sprayingItems()->withTrashed()->exists();
         }
 
         if ($record instanceof HarvestSeason) {
@@ -199,12 +234,24 @@ class PruneSoftDeletedRecordsCommand extends Command
             return $record->records()->withTrashed()->exists();
         }
 
+        if ($record instanceof HarvestRecord) {
+            return $record->details()->withTrashed()->exists();
+        }
+
         if ($record instanceof FertilizationRecord) {
-            return $record->items()->exists();
+            return $record->items()->withTrashed()->exists();
         }
 
         if ($record instanceof SprayingRecord) {
-            return $record->items()->exists();
+            return $record->items()->withTrashed()->exists();
+        }
+
+        if ($record instanceof DurianVariety) {
+            return $record->trees()->withTrashed()->exists();
+        }
+
+        if ($record instanceof Organization) {
+            return $record->users()->withTrashed()->exists();
         }
 
         return false;

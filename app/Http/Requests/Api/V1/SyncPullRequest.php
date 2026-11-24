@@ -24,6 +24,7 @@ class SyncPullRequest extends FormRequest
             'entities' => ['nullable', 'array'],
             'entities.*' => ['string', Rule::in(SyncEngineService::PULLABLE_ENTITIES)],
             'limit' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'cursor' => ['nullable', 'string', 'max:4096'],
         ];
     }
 }

@@ -105,6 +105,9 @@ return [
 
     'iot' => [
         'ingest_key' => env('IOT_INGEST_KEY'),
+        'ingest_rate_limit_per_minute' => (int) env('IOT_INGEST_RATE_LIMIT', 120),
+        'ingest_ip_rate_limit_per_minute' => (int) env('IOT_INGEST_IP_RATE_LIMIT', 300),
+        'auth_failure_limit_per_minute' => (int) env('IOT_AUTH_FAILURE_LIMIT', 10),
     ],
 
 ];

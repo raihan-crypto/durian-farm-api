@@ -28,3 +28,11 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Mobile build artifacts
+/mobile/build/
+/mobile/android/build/
+/mobile/android/app/build/
+/mobile/android/.gradle/
+/mobile/.dart_tool/
+.kotlin/

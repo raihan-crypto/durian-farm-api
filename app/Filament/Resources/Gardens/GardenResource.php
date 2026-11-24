@@ -113,7 +113,18 @@ class GardenResource extends Resource
         return $schema->components([
             Select::make('village_id')
                 ->label('Desa')
-                ->options(fn () => Village::pluck('name', 'id'))
+                ->options(function () {
+                    $query = Village::query()->orderBy('name');
+                    $user = auth()->user();
+                    if ($user) {
+                        $accessibleVillageIds = app(TerritoryScopeService::class)->getAccessibleVillageIds($user);
+                        if ($accessibleVillageIds !== null) {
+                            $query->whereIn('id', $accessibleVillageIds);
+                        }
+                    }
+
+                    return $query->pluck('name', 'id');
+                })
                 ->searchable()
                 ->live()
                 ->dehydrated(false)
@@ -128,16 +139,37 @@ class GardenResource extends Resource
             Select::make('block_id')
                 ->label('Blok')
                 ->options(function ($get, ?Garden $record) {
-                    $villageId = $get('village_id') ?? $record?->block?->village_id;
-                    if ($villageId) {
-                        return Block::where('village_id', $villageId)->pluck('name', 'id');
+                    $query = Block::query()->orderBy('name');
+                    $user = auth()->user();
+                    if ($user) {
+                        $accessibleBlockIds = app(TerritoryScopeService::class)->getAccessibleBlockIds($user);
+                        if ($accessibleBlockIds !== null) {
+                            $query->whereIn('id', $accessibleBlockIds);
+                        }
                     }
 
-                    return Block::pluck('name', 'id');
+                    $villageId = $get('village_id') ?? $record?->block?->village_id;
+                    if ($villageId) {
+                        $query->where('village_id', $villageId);
+                    }
+
+                    return $query->pluck('name', 'id');
                 })
                 ->searchable()
                 ->preload()
-                ->required(),
+                ->required()
+                ->rules([
+                    fn () => function (string $attribute, mixed $value, \Closure $fail): void {
+                        $user = auth()->user();
+                        if (! $user || ! filled($value)) {
+                            return;
+                        }
+
+                        if (! app(TerritoryScopeService::class)->canAccessBlock($user, (string) $value)) {
+                            $fail('Anda tidak memiliki izin untuk memilih blok di luar wilayah Anda.');
+                        }
+                    },
+                ]),
 
             TextInput::make('name')
                 ->label('Nama Kebun')
@@ -227,7 +259,19 @@ class GardenResource extends Resource
                 TextColumn::make('trees_count')->label('Pohon')->counts('trees')->sortable(),
             ])
             ->filters([
-                SelectFilter::make('block_id')->label('Blok')->relationship('block', 'name'),
+                SelectFilter::make('block_id')
+                    ->label('Blok')
+                    ->relationship('block', 'name', function (Builder $query): Builder {
+                        $user = auth()->user();
+                        if ($user) {
+                            $accessibleBlockIds = app(TerritoryScopeService::class)->getAccessibleBlockIds($user);
+                            if ($accessibleBlockIds !== null) {
+                                $query->whereIn('blocks.id', $accessibleBlockIds);
+                            }
+                        }
+
+                        return $query;
+                    }),
                 SelectFilter::make('status')->label('Status')->options([
                     'active' => 'Aktif',
                     'inactive' => 'Tidak aktif',
@@ -289,10 +333,17 @@ class GardenResource extends Resource
                 ForceDeleteAction::make()
                     ->visible(fn (Model $record) => $record->trashed() && (bool) auth()->user()?->hasRole('super_admin'))
                     ->before(function (Action $action, Model $record) {
-                        if ($record->trees()->withTrashed()->exists()) {
+                        /** @var Garden $record */
+                        $hasDependencies = $record->trees()->withTrashed()->exists()
+                            || $record->harvestSeasons()->withTrashed()->exists()
+                            || $record->harvestSessions()->withTrashed()->exists()
+                            || $record->harvestRecords()->withTrashed()->exists()
+                            || $record->monitoringAreas()->exists();
+
+                        if ($hasDependencies) {
                             Notification::make()
                                 ->title('Gagal Hapus Permanen')
-                                ->body('Kebun ini tidak dapat dihapus permanen karena masih ada data pohon (aktif atau di tempat sampah) yang terhubung.')
+                                ->body('Kebun ini tidak dapat dihapus permanen karena masih memiliki data pohon, panen, atau area monitoring yang terhubung.')
                                 ->danger()
                                 ->send();
 

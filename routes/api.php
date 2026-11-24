@@ -44,7 +44,8 @@ Route::prefix('v1')->group(function () {
         ->middleware('throttle:public-tree');
 
     // IoT telemetry ingest endpoint authenticated via X-IoT-Ingest-Key (SRS 14.4)
-    Route::post('/iot/telemetry', [IotDeviceController::class, 'ingestTelemetry']);
+    Route::post('/iot/telemetry', [IotDeviceController::class, 'ingestTelemetry'])
+        ->middleware('throttle:iot-telemetry');
 
     // Protected API endpoints
     Route::middleware('auth:sanctum')->group(function () {

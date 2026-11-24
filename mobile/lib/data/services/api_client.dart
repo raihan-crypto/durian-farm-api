@@ -84,12 +84,16 @@ class ApiClient {
     required String baseUrl,
     required String token,
     String? since,
+    String? cursor,
+    int? limit,
   }) async {
     final response = await _http.post(
       Uri.parse('$baseUrl/api/v1/sync/pull'),
       headers: _authHeaders(token),
       body: jsonEncode({
         'since': ?since,
+        'cursor': ?cursor,
+        'limit': ?limit,
       }),
     );
     return _decodeOrThrow(response);

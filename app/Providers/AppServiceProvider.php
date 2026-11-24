@@ -62,6 +62,41 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
         });
 
+        // 5b. Layered rate limiter for IoT telemetry ingest (strict brute-force protection + per-device burst + IP ceiling)
+        RateLimiter::for('iot-telemetry', function (Request $request) {
+            $configuredKey = (string) config('durian.iot.ingest_key', '');
+            $providedKey = (string) $request->header('X-IoT-Ingest-Key', '');
+            $isAuthenticated = $configuredKey !== '' && hash_equals($configuredKey, $providedKey);
+
+            $tooManyResponse = function (Request $request, array $headers) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Terlalu banyak permintaan telemetri IoT. Silakan coba lagi beberapa saat.',
+                ], 429, $headers);
+            };
+
+            if (! $isAuthenticated) {
+                $authLimit = max((int) config('durian.iot.auth_failure_limit_per_minute', 10), 1);
+
+                return Limit::perMinute($authLimit)
+                    ->by('iot-auth-fail:'.$request->ip())
+                    ->response($tooManyResponse);
+            }
+
+            $deviceCode = strtolower(trim((string) $request->input('device_code', 'unknown')));
+            $deviceLimit = max((int) config('durian.iot.ingest_rate_limit_per_minute', 120), 1);
+            $ipLimit = max((int) config('durian.iot.ingest_ip_rate_limit_per_minute', 300), 1);
+
+            return [
+                Limit::perMinute($deviceLimit)
+                    ->by('iot-device:'.$deviceCode)
+                    ->response($tooManyResponse),
+                Limit::perMinute($ipLimit)
+                    ->by('iot-ip:'.$request->ip())
+                    ->response($tooManyResponse),
+            ];
+        });
+
         // 6. Master data cache invalidation listeners
         DurianVariety::saved(fn () => Cache::forget('durian:master:varieties:active'));
         DurianVariety::deleted(fn () => Cache::forget('durian:master:varieties:active'));

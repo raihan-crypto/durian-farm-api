@@ -51,6 +51,11 @@ class _DurianFarmAppState extends State<DurianFarmApp> {
   }
 
   Future<void> _restoreSession() async {
+    try {
+      await _syncRepository.recoverInterruptedOnStartup();
+    } catch (_) {
+      // Non-fatal: startup recovery will also run before the next sync cycle.
+    }
     final saved = await _authRepository.restoreSession();
     if (mounted) {
       setState(() {

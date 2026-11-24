@@ -8,6 +8,7 @@ use App\Http\Requests\Api\V1\UpdateUserRequest;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\RoleHierarchyService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\Hash;
 class UserController extends Controller
 {
     use ApiResponse;
+
+    public function __construct(protected RoleHierarchyService $roleHierarchy) {}
 
     /**
      * Display a listing of the users.
@@ -68,6 +71,14 @@ class UserController extends Controller
      */
     public function store(CreateUserRequest $request): JsonResponse
     {
+        $actor = $request->user();
+        $roleIds = $request->filled('role_ids') ? (array) $request->input('role_ids', []) : [];
+        $roleNames = $request->filled('role_names') ? (array) $request->input('role_names', []) : [];
+
+        if (($roleIds !== [] || $roleNames !== []) && ! $this->roleHierarchy->canAssignRoles($actor, null, $roleIds, $roleNames)) {
+            return $this->errorResponse('Anda tidak memiliki izin untuk menetapkan role yang dilindungi', 403);
+        }
+
         $user = DB::transaction(function () use ($request) {
             $data = $request->validated();
             $data['password'] = Hash::make($data['password']);
@@ -111,10 +122,25 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, string $id): JsonResponse
     {
-        $user = User::find($id);
+        $user = User::with('roles')->find($id);
 
         if (! $user) {
             return $this->errorResponse('Pengguna tidak ditemukan', 404);
+        }
+
+        $actor = $request->user();
+        if (! $this->roleHierarchy->canModifyTargetUser($actor, $user)) {
+            return $this->errorResponse('Anda tidak memiliki izin untuk mengubah akun super admin', 403);
+        }
+
+        $isUpdatingRoles = $request->has('role_ids') || $request->has('role_names');
+        if ($isUpdatingRoles) {
+            $roleIds = $request->has('role_ids') ? (array) ($request->input('role_ids') ?? []) : [];
+            $roleNames = $request->has('role_names') ? (array) ($request->input('role_names') ?? []) : [];
+
+            if (! $this->roleHierarchy->canAssignRoles($actor, $user, $roleIds, $roleNames)) {
+                return $this->errorResponse('Anda tidak memiliki izin untuk mengubah atau menetapkan role tersebut', 403);
+            }
         }
 
         $updatedUser = DB::transaction(function () use ($request, $user) {
@@ -144,12 +170,16 @@ class UserController extends Controller
     /**
      * Deactivate or remove the specified user.
      */
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
-        $user = User::find($id);
+        $user = User::with('roles')->find($id);
 
         if (! $user) {
             return $this->errorResponse('Pengguna tidak ditemukan', 404);
+        }
+
+        if (! $this->roleHierarchy->canModifyTargetUser($request->user(), $user)) {
+            return $this->errorResponse('Anda tidak memiliki izin untuk menonaktifkan akun super admin', 403);
         }
 
         // Soft deactivation to preserve historical records

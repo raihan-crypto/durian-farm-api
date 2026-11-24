@@ -18,6 +18,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -83,7 +84,19 @@ class TreeResource extends Resource
                 })
                 ->searchable()
                 ->preload()
-                ->required(),
+                ->required()
+                ->rules([
+                    fn () => function (string $attribute, mixed $value, \Closure $fail): void {
+                        $user = auth()->user();
+                        if (! $user || ! filled($value)) {
+                            return;
+                        }
+
+                        if (! app(TerritoryScopeService::class)->canAccessGarden($user, (string) $value)) {
+                            $fail('Anda tidak memiliki izin untuk memilih kebun di luar wilayah Anda.');
+                        }
+                    },
+                ]),
             Select::make('variety_id')->label('Varietas')->relationship('variety', 'name')->searchable()->preload(),
             TextInput::make('tree_code')->label('Kode Pohon')->required()->maxLength(100),
             TextInput::make('tree_identity_number')
@@ -133,7 +146,19 @@ class TreeResource extends Resource
                 TextColumn::make('planted_at')->label('Tgl Tanam')->date('d M Y')->placeholder('-'),
             ])
             ->filters([
-                SelectFilter::make('garden_id')->label('Kebun')->relationship('garden', 'name'),
+                SelectFilter::make('garden_id')
+                    ->label('Kebun')
+                    ->relationship('garden', 'name', function (Builder $query): Builder {
+                        $user = auth()->user();
+                        if ($user) {
+                            $accessibleGardenIds = app(TerritoryScopeService::class)->getAccessibleGardenIds($user);
+                            if ($accessibleGardenIds !== null) {
+                                $query->whereIn('gardens.id', $accessibleGardenIds);
+                            }
+                        }
+
+                        return $query;
+                    }),
                 SelectFilter::make('variety_id')->label('Varietas')->relationship('variety', 'name'),
                 SelectFilter::make('status')->label('Status')->options(Tree::STATUS_LABELS),
                 TrashedFilter::make(),
@@ -164,7 +189,27 @@ class TreeResource extends Resource
                 RestoreAction::make()
                     ->visible(fn (Model $record) => $record->trashed() && (bool) auth()->user()?->hasRole('super_admin')),
                 ForceDeleteAction::make()
-                    ->visible(fn (Model $record) => $record->trashed() && (bool) auth()->user()?->hasRole('super_admin')),
+                    ->visible(fn (Model $record) => $record->trashed() && (bool) auth()->user()?->hasRole('super_admin'))
+                    ->before(function (Action $action, Model $record): void {
+                        /** @var Tree $record */
+                        $hasDependencies = $record->measurements()->withTrashed()->exists()
+                            || $record->harvestRecords()->withTrashed()->exists()
+                            || $record->photos()->withTrashed()->exists()
+                            || $record->fertilizationRecords()->withTrashed()->exists()
+                            || $record->sprayingRecords()->withTrashed()->exists()
+                            || $record->floweringRecords()->withTrashed()->exists()
+                            || $record->fruitDevelopmentRecords()->withTrashed()->exists();
+
+                        if ($hasDependencies) {
+                            Notification::make()
+                                ->title('Gagal Hapus Permanen')
+                                ->body('Pohon ini tidak dapat dihapus permanen karena masih memiliki riwayat pengukuran, aktivitas, foto, atau panen yang terhubung.')
+                                ->danger()
+                                ->send();
+
+                            $action->halt();
+                        }
+                    }),
             ]);
     }
 

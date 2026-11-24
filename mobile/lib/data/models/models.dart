@@ -167,6 +167,9 @@ class SyncQueueItem {
     required this.payload,
     required this.status,
     required this.createdAt,
+    this.ownerUserId,
+    this.syncingStartedAt,
+    this.syncLeaseId,
     this.errorMessage,
     this.syncedAt,
   });
@@ -177,8 +180,13 @@ class SyncQueueItem {
   final Map<String, Object?> payload;
   final LocalSyncStatus status;
   final String createdAt;
+  final String? ownerUserId;
+  final String? syncingStartedAt;
+  final String? syncLeaseId;
   final String? errorMessage;
   final String? syncedAt;
+
+  bool get isQuarantined => ownerUserId == null || ownerUserId!.isEmpty;
 
   factory SyncQueueItem.fromMap(Map<String, Object?> map) => SyncQueueItem(
         clientTransactionId: map['client_transaction_id'] as String,
@@ -191,6 +199,9 @@ class SyncQueueItem {
           orElse: () => LocalSyncStatus.pending,
         ),
         createdAt: map['created_at'] as String,
+        ownerUserId: map['owner_user_id'] as String?,
+        syncingStartedAt: map['syncing_started_at'] as String?,
+        syncLeaseId: map['sync_lease_id'] as String?,
         errorMessage: map['error_message'] as String?,
         syncedAt: map['synced_at'] as String?,
       );
@@ -204,6 +215,9 @@ class PendingPhotoItem {
     required this.localFilePath,
     required this.status,
     required this.createdAt,
+    this.ownerUserId,
+    this.syncingStartedAt,
+    this.syncLeaseId,
     this.caption,
     this.errorMessage,
   });
@@ -214,8 +228,13 @@ class PendingPhotoItem {
   final String localFilePath;
   final LocalSyncStatus status;
   final String createdAt;
+  final String? ownerUserId;
+  final String? syncingStartedAt;
+  final String? syncLeaseId;
   final String? caption;
   final String? errorMessage;
+
+  bool get isQuarantined => ownerUserId == null || ownerUserId!.isEmpty;
 
   factory PendingPhotoItem.fromMap(Map<String, Object?> map) =>
       PendingPhotoItem(
@@ -228,6 +247,9 @@ class PendingPhotoItem {
           orElse: () => LocalSyncStatus.pending,
         ),
         createdAt: map['created_at'] as String,
+        ownerUserId: map['owner_user_id'] as String?,
+        syncingStartedAt: map['syncing_started_at'] as String?,
+        syncLeaseId: map['sync_lease_id'] as String?,
         caption: map['caption'] as String?,
         errorMessage: map['error_message'] as String?,
       );

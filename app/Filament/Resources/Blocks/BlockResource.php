@@ -98,10 +98,32 @@ class BlockResource extends Resource
         return $schema->components([
             Select::make('village_id')
                 ->label('Desa')
-                ->relationship('village', 'name')
+                ->relationship('village', 'name', function (Builder $query): Builder {
+                    $user = auth()->user();
+                    if ($user) {
+                        $accessibleVillageIds = app(TerritoryScopeService::class)->getAccessibleVillageIds($user);
+                        if ($accessibleVillageIds !== null) {
+                            $query->whereIn('villages.id', $accessibleVillageIds);
+                        }
+                    }
+
+                    return $query;
+                })
                 ->searchable()
                 ->preload()
-                ->required(),
+                ->required()
+                ->rules([
+                    fn () => function (string $attribute, mixed $value, \Closure $fail): void {
+                        $user = auth()->user();
+                        if (! $user || ! filled($value)) {
+                            return;
+                        }
+
+                        if (! app(TerritoryScopeService::class)->canAccessVillage($user, (string) $value)) {
+                            $fail('Anda tidak memiliki izin untuk memilih desa di luar wilayah Anda.');
+                        }
+                    },
+                ]),
 
             TextInput::make('name')
                 ->label('Nama Blok')
@@ -152,7 +174,19 @@ class BlockResource extends Resource
                     }),
             ])
             ->filters([
-                SelectFilter::make('village_id')->label('Desa')->relationship('village', 'name'),
+                SelectFilter::make('village_id')
+                    ->label('Desa')
+                    ->relationship('village', 'name', function (Builder $query): Builder {
+                        $user = auth()->user();
+                        if ($user) {
+                            $accessibleVillageIds = app(TerritoryScopeService::class)->getAccessibleVillageIds($user);
+                            if ($accessibleVillageIds !== null) {
+                                $query->whereIn('villages.id', $accessibleVillageIds);
+                            }
+                        }
+
+                        return $query;
+                    }),
                 SelectFilter::make('approval_status')->label('Status Persetujuan')->options([
                     'approved' => 'Disetujui',
                     'pending_addition' => 'Menunggu Penambahan',

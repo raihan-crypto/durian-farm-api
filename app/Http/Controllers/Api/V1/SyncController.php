@@ -42,7 +42,8 @@ class SyncController extends Controller
             $request->user(),
             $data['since'] ?? null,
             $data['entities'] ?? null,
-            (int) ($data['limit'] ?? 200)
+            (int) ($data['limit'] ?? 200),
+            $data['cursor'] ?? null
         );
 
         return $this->successResponse($delta, 'Perubahan data sinkronisasi berhasil dimuat');

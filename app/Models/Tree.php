@@ -62,6 +62,23 @@ class Tree extends Model
         'photo_path',
     ];
 
+    protected $appends = [
+        'qr_token',
+    ];
+
+    public function getQrTokenAttribute(): ?string
+    {
+        if (array_key_exists('qr_token', $this->attributes)) {
+            return $this->attributes['qr_token'];
+        }
+
+        if ($this->relationLoaded('qrCode')) {
+            return $this->qrCode?->is_active ? $this->qrCode->public_token : null;
+        }
+
+        return null;
+    }
+
     protected static function booted(): void
     {
         static::saving(function (Tree $tree) {

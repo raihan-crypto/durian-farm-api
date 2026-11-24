@@ -5,6 +5,7 @@ import 'package:durian_farm_mobile/data/repositories/auth_repository.dart';
 import 'package:durian_farm_mobile/data/repositories/offline_sync_repository.dart';
 import 'package:durian_farm_mobile/data/services/api_client.dart';
 import 'package:durian_farm_mobile/data/services/session_storage.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -19,6 +20,7 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({});
   });
 
   test('persists bootstrap snapshot into SQLite and supports offline QR lookup', () async {
@@ -592,8 +594,9 @@ void main() {
     await db.close();
   });
 
-  test('RSK-08: SessionStorage encrypts session credentials and migrates legacy plaintext keys', () async {
-    final storage = SessionStorage();
+  test('RSK-08: SessionStorage stores credentials in platform secure vault and migrates legacy plaintext keys', () async {
+    final vault = InMemorySecureVault();
+    final storage = SessionStorage(vault: vault);
 
     const testSession = AuthSession(
       token: 'secret-token-12345',
@@ -613,14 +616,10 @@ void main() {
     expect(retrieved.userId, 'user-sec-1');
     expect(retrieved.userEmail, 'aman@durian.local');
 
-    // Verify raw SharedPreferences storage does NOT contain raw plaintext token
+    // Verify raw SharedPreferences storage does NOT contain any session token
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.containsKey('durian_auth_session'), isFalse); // Legacy plaintext key not present
-
-    final rawSecure = prefs.getString('durian_auth_session_secure');
-    expect(rawSecure, isNotNull);
-    expect(rawSecure!.startsWith('enc:v1:'), isTrue);
-    expect(rawSecure.contains('secret-token-12345'), isFalse); // Token is encrypted!
+    expect(prefs.containsKey('durian_auth_session'), isFalse);
+    expect(prefs.containsKey('durian_auth_session_secure'), isFalse);
 
     // Verify migration: simulate existing user with legacy plaintext key
     await storage.clearSession();
@@ -638,16 +637,198 @@ void main() {
       ).toJson()),
     );
 
-    // getSession() must auto-migrate
+    // getSession() must auto-migrate into secure vault
     final migratedSession = await storage.getSession();
     expect(migratedSession, isNotNull);
     expect(migratedSession!.token, 'legacy-unencrypted-token');
 
-    // Verify legacy unencrypted key was removed and migrated to secure storage
+    // Verify legacy unencrypted key was removed and migrated to secure vault
     expect(prefs.containsKey('durian_auth_session'), isFalse);
-    final migratedSecure = prefs.getString('durian_auth_session_secure');
-    expect(migratedSecure, isNotNull);
-    expect(migratedSecure!.startsWith('enc:v1:'), isTrue);
-    expect(migratedSecure.contains('legacy-unencrypted-token'), isFalse);
+    final storedInVault = await vault.read('durian_auth_session_secure');
+    expect(storedInVault, isNotNull);
+    expect(storedInVault!.contains('legacy-unencrypted-token'), isTrue);
+  });
+
+  test('QR token semantics: preserves token when omitted, updates when active, clears when explicitly inactive or null', () async {
+    final db = LocalDatabase(databasePathOverride: inMemoryDatabasePath);
+    final storage = SessionStorage();
+    final repo = OfflineSyncRepository(
+      localDatabase: db,
+      apiClient: ApiClient(),
+      sessionStorage: storage,
+    );
+
+    // 1. Initial bootstrap with active QR token
+    await repo.persistBootstrapSnapshot({
+      'villages': [],
+      'blocks': [],
+      'gardens': [
+        {'id': 'g-test-1', 'block_id': 'b-1', 'name': 'Kebun Test'},
+      ],
+      'durian_varieties': [
+        {'id': 'v-test-1', 'code': 'BWR', 'name': 'Bawor'},
+      ],
+      'product_categories': [],
+      'agricultural_products': [],
+      'trees': [
+        {
+          'id': 'tree-qr-test',
+          'garden_id': 'g-test-1',
+          'variety_id': 'v-test-1',
+          'tree_code': 'BWR-001',
+          'tree_name': 'Pohon Bawor Awal',
+          'status': 'active',
+          'qr_token': 'active-initial-token-111',
+        },
+      ],
+      'harvest_seasons': [],
+      'harvest_sessions': [],
+    });
+
+    // Verify initial active token
+    var tree = await repo.findTreeByQrOrCode('active-initial-token-111');
+    expect(tree, isNotNull);
+    expect(tree!.treeName, 'Pohon Bawor Awal');
+
+    // 2. State 1: Partial delta WITHOUT any QR fields (neither qr_token nor qr_code key)
+    // -> Must PRESERVE existing local qr_token
+    await repo.persistDeltaChanges({
+      'trees': [
+        {
+          'id': 'tree-qr-test',
+          'garden_id': 'g-test-1',
+          'variety_id': 'v-test-1',
+          'tree_code': 'BWR-001',
+          'tree_name': 'Pohon Bawor Nama Baru',
+          'status': 'active',
+          'notes': 'Update parsial tanpa field QR',
+          'updated_at': '2026-11-24T18:00:00Z',
+        },
+      ],
+    });
+
+    tree = await repo.findTreeByQrOrCode('active-initial-token-111');
+    expect(tree, isNotNull, reason: 'Old token must be preserved when QR fields are omitted');
+    expect(tree!.treeName, 'Pohon Bawor Nama Baru');
+
+    // 3. State 2: Delta with active new QR code in qr_code object
+    // -> Must UPDATE to the new token
+    await repo.persistDeltaChanges({
+      'trees': [
+        {
+          'id': 'tree-qr-test',
+          'garden_id': 'g-test-1',
+          'variety_id': 'v-test-1',
+          'tree_code': 'BWR-001',
+          'tree_name': 'Pohon Bawor Re-QR Active',
+          'status': 'active',
+          'qr_code': {
+            'public_token': 'new-active-token-222',
+            'is_active': true,
+          },
+        },
+      ],
+    });
+
+    // Old token must no longer match
+    expect(await repo.findTreeByQrOrCode('active-initial-token-111'), isNull);
+    // New active token must match
+    tree = await repo.findTreeByQrOrCode('new-active-token-222');
+    expect(tree, isNotNull);
+    expect(tree!.treeName, 'Pohon Bawor Re-QR Active');
+
+    // 4. State 3: Delta with EXPLICITLY INACTIVE QR (is_active: false)
+    // -> Must CLEAR local qr_token to null and NOT fallback to old token
+    await repo.persistDeltaChanges({
+      'trees': [
+        {
+          'id': 'tree-qr-test',
+          'garden_id': 'g-test-1',
+          'variety_id': 'v-test-1',
+          'tree_code': 'BWR-001',
+          'tree_name': 'Pohon Bawor QR Deactivated',
+          'status': 'active',
+          'qr_code': {
+            'public_token': 'new-active-token-222',
+            'is_active': false,
+          },
+        },
+      ],
+    });
+
+    // Neither new nor old token should match now
+    expect(await repo.findTreeByQrOrCode('new-active-token-222'), isNull);
+    expect(await repo.findTreeByQrOrCode('active-initial-token-111'), isNull);
+
+    // Can still be found by tree code
+    tree = await repo.findTreeByQrOrCode('BWR-001');
+    expect(tree, isNotNull);
+    expect(tree!.treeName, 'Pohon Bawor QR Deactivated');
+
+    // 5. Re-activate with direct qr_token string (State 2)
+    await repo.persistDeltaChanges({
+      'trees': [
+        {
+          'id': 'tree-qr-test',
+          'garden_id': 'g-test-1',
+          'variety_id': 'v-test-1',
+          'tree_code': 'BWR-001',
+          'tree_name': 'Pohon Bawor Reactivated String',
+          'status': 'active',
+          'qr_token': 'string-active-token-333',
+        },
+      ],
+    });
+
+    tree = await repo.findTreeByQrOrCode('string-active-token-333');
+    expect(tree, isNotNull);
+
+    // 6. Explicit null qr_token (State 3 via API contract)
+    // -> Must CLEAR local qr_token to null and NOT fallback
+    await repo.persistDeltaChanges({
+      'trees': [
+        {
+          'id': 'tree-qr-test',
+          'garden_id': 'g-test-1',
+          'variety_id': 'v-test-1',
+          'tree_code': 'BWR-001',
+          'tree_name': 'Pohon Bawor Explicit Null',
+          'status': 'active',
+          'qr_token': null,
+        },
+      ],
+    });
+
+    expect(await repo.findTreeByQrOrCode('string-active-token-333'), isNull);
+
+    // 7. Bootstrap with inactive QR sets null token without errors
+    await repo.persistBootstrapSnapshot({
+      'villages': [],
+      'blocks': [],
+      'gardens': [],
+      'durian_varieties': [],
+      'product_categories': [],
+      'agricultural_products': [],
+      'trees': [
+        {
+          'id': 'tree-bootstrap-inactive',
+          'garden_id': 'g-test-1',
+          'variety_id': 'v-test-1',
+          'tree_code': 'BWR-BOOT',
+          'tree_name': 'Pohon Inactive Bootstrap',
+          'status': 'active',
+          'qr_code': {
+            'public_token': 'inactive-bootstrap-token',
+            'is_active': false,
+          },
+        },
+      ],
+      'harvest_seasons': [],
+      'harvest_sessions': [],
+    });
+
+    expect(await repo.findTreeByQrOrCode('inactive-bootstrap-token'), isNull);
+
+    await db.close();
   });
 }
